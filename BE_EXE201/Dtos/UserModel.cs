@@ -23,6 +23,7 @@ namespace BE_EXE201.Dtos
         [MaxLength(100)]
         public string Gender { get; set; }
 
+        public string? OTPCode { get; set; }
 
         [MaxLength(255)]
         public string Address { get; set; }
@@ -30,12 +31,11 @@ namespace BE_EXE201.Dtos
 
         [MaxLength(15)]
         public string PhoneNumber { get; set; }
-           public DateTime CreateDate { get; set; }
-      
+        public DateTime CreateDate { get; set; }
         public string Status { get; set; }
 
-        [ForeignKey("UserRole")]
         public int RoleID { get; set; }
-        public virtual UserRoleModel UserRole { get; set; }
+
+        public string RoleName { get; set; }
     }
 }

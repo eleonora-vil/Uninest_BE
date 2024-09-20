@@ -6,6 +6,11 @@ using BE_EXE201.Entities;
 using BE_EXE201.Repositories;
 using BE_EXE201.Services;
 using BE_EXE201.Settings;
+using AutoMapper;
+using BE_EXE201.Helpers;
+using BE_EXE201.Middlewares;
+using MailKit;
+using BE_EXE201.Mapper;
 
 namespace BE_EXE201.Extensions;
 
@@ -13,23 +18,39 @@ public static class ServicesExtensions
 {
     public static IServiceCollection AddInfrastructure(this IServiceCollection services, IConfiguration configuration)
     {
+        services.AddScoped<ExceptionMiddleware>();
         services.AddControllers();
         services.AddEndpointsApiExplorer();
         services.AddSwaggerGen();
 
-        var jwtSettings = configuration.GetSection(nameof(JwtSettings)).Get<JwtSettings>();
-
-        services.Configure<JwtSettings>(options =>
+        //Add Mapper
+        var mapperConfig = new MapperConfiguration(mc =>
         {
-            options.Key = jwtSettings.Key;
+            mc.AddProfile(new ApplicationMapper());
         });
 
+        IMapper mapper = mapperConfig.CreateMapper();
+        services.AddSingleton(mapper);
+
+        //Set time
+        //AppContext.SetSwitch("Npgsql.EnableLegacyTimestampBehavior", true);
+
+        var jwtSettings = configuration.GetSection(nameof(JwtSettings)).Get<JwtSettings>();
+        services.Configure<JwtSettings>(val =>
+        {
+            val.Key = jwtSettings.Key;
+        });
+
+        services.Configure<MailSettings>(configuration.GetSection(nameof(MailSettings)));
+
+        services.AddAuthorization();
+
         services.AddAuthentication(options =>
-            {
-                options.DefaultScheme = JwtBearerDefaults.AuthenticationScheme;
-                options.DefaultChallengeScheme = JwtBearerDefaults.AuthenticationScheme;
-                options.DefaultAuthenticateScheme = JwtBearerDefaults.AuthenticationScheme;
-            })
+        {
+            options.DefaultScheme = JwtBearerDefaults.AuthenticationScheme;
+            options.DefaultChallengeScheme = JwtBearerDefaults.AuthenticationScheme;
+            options.DefaultAuthenticateScheme = JwtBearerDefaults.AuthenticationScheme;
+        })
             .AddJwtBearer(options =>
             {
                 options.TokenValidationParameters = new TokenValidationParameters()
@@ -48,7 +69,12 @@ public static class ServicesExtensions
         });
 
         services.AddScoped(typeof(IRepository<,>), typeof(GenericRepository<,>));
+       // services.AddScoped<DatabaseInitialiser>();
         services.AddScoped<IdentityService>();
+        services.AddScoped<UserService>();
+        services.AddScoped<UserRoleService>();
+        services.AddScoped<EmailService>();
+
 
         return services;
     }

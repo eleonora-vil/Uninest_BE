@@ -18,6 +18,7 @@ namespace BE_EXE201.Entities
         [MaxLength(100)]
         public string Password { get; set; }
 
+        public string? OTPCode { get; set; }
         [Required]
         [MaxLength(50)]
         public string FullName { get; set; }

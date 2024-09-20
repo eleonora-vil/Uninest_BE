@@ -12,6 +12,11 @@ public record ApiResult<T>
         return new ApiResult<T> { Success = true, Result = result };
     }
 
+    public static ApiResult<T> Error(T? result)
+    {
+        return new ApiResult<T> { Success = false, Result = result };
+    }
+
     public static ApiResult<object> Fail(Exception ex)
     {
         return new ApiResult<object>

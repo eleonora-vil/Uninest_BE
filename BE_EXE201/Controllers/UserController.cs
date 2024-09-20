@@ -19,14 +19,18 @@ namespace BE_EXE201.Controllers
     {
         private UserService _userService;
         private readonly UserRoleService _userRoleService;
+        private readonly IdentityService _identityService;
+        private readonly EmailService _emailService;
 
-        public UserController(UserService userService, UserRoleService userRoleService)
+        public UserController(UserService userService, UserRoleService userRoleService, IdentityService identityService, EmailService emailService)
         {
             _userService = userService;
             _userRoleService = userRoleService;
+            _identityService = identityService;
+            _emailService = emailService;
         }
         [HttpGet("GetAll")]
-        [Authorize(Roles = "Admin")]
+      // [Authorize(Roles = "Admin")]
         public async Task<IActionResult> GetAllUsers()
         {
             var result = await _userService.GetAllUsers();
@@ -38,22 +42,24 @@ namespace BE_EXE201.Controllers
 
         [HttpPost]
         [Route("Create")]
-        [Authorize(Roles = "Admin")]
+       // [Authorize(Roles = "Super Admin,Admin")]
         public async Task<IActionResult> CreateNewUser([FromBody] CreateNewUserRequest req)
         {
-
             var user = req.ToUserModel();
-            UserValidator validation = new UserValidator();
-            var valid = await validation.ValidateAsync(user);
+            UserValidator validations = new UserValidator();
+            var valid = await validations.ValidateAsync(user);
+
             if (!valid.IsValid)
             {
                 throw new RequestValidationException(valid.ToProblemDetails());
             }
+
             var userRole = await _userRoleService.GetByName(req.RoleName);
             user.RoleID = userRole.RoleId;
-            var result = _userService.CreateNewUser(user);
-            user.UserRole = userRole;
-            if (user is not null)
+
+            var result = await _userService.CreateNewUser(user);
+
+            if (result is not null)
             {
                 return Ok(ApiResult<CreateUsersRespone>.Succeed(new CreateUsersRespone
                 {
@@ -67,7 +73,7 @@ namespace BE_EXE201.Controllers
         }
 
         [HttpPut("Update/{userId}")]
-        [Authorize(Roles ="Admin")]
+        //[Authorize(Roles ="Admin")]
         public async Task<IActionResult> UpdateUser(int userId, [FromBody] UpdateUserRequest req)
         {
             try
@@ -112,7 +118,75 @@ namespace BE_EXE201.Controllers
                 return StatusCode(500, "Internal server error: " + ex.Message);
             }
         }
+        [HttpPost("ForgotPassword")]
+        public async Task<IActionResult> ForgotPassword(ForgotPasswordRequest req)
+        {
+            var email = req.Email;
+            var user = await _userService.GetUserByEmail(email);
 
+            // Check if the user exists
+            if (user == null)
+            {
+                return BadRequest(ApiResult<ForgotPasswordResponse>.Error(new ForgotPasswordResponse
+                {
+                    Message = "User with this email does not exist"
+                }));
+            }
+
+            // Generate new password
+            var newPassword = SecurityUtil.GenerateRandomPassword();
+
+            // Send email with new password using the service
+            var emailSent = await _userService.SendPasswordResetEmail(email, user.FullName, newPassword);
+            if (!emailSent)
+            {
+                throw new BadRequestException("Failed to send email");
+            }
+
+            // Update the user's password
+            await _userService.UpdateUserPassword(user, newPassword);
+
+            return Ok(ApiResult<ForgotPasswordResponse>.Succeed(new ForgotPasswordResponse
+            {
+                Message = "A new password has been sent to your email"
+            }));
+        }
+
+
+        /*
+                [HttpPost("SubmitOTP")]
+                public async Task<IActionResult> SubmitOTP(SubmitOTPResquest req)
+                {
+                    var result = await _userService.SubmitOTP(req);
+                    if (!result)
+                    {
+                        throw new BadRequestException("OTP Code is not Correct");
+                    }
+                    return Ok(ApiResult<FirstStepResgisterInfoResponse>.Succeed(new FirstStepResgisterInfoResponse
+                    {
+                        message = $"Create new Account Success for email: {req.Email}"
+                    }));
+                }*/
+
+        [HttpPost("SubmitOTP")]
+        public async Task<IActionResult> SubmitOTP(SubmitOTPResquest req)
+        {
+            // Kiểm tra xem OTP có hợp lệ không
+            var isValidOTP = await _userService.SubmitOTP(req);
+            if (!isValidOTP)
+            {
+                return BadRequest(ApiResult<FirstStepResgisterInfoResponse>.Error(new FirstStepResgisterInfoResponse
+                {
+                    message = "OTP code is not correct or has expired."
+                }));
+            }
+
+            // Nếu OTP hợp lệ, trả về thông báo thành công
+            return Ok(ApiResult<FirstStepResgisterInfoResponse>.Succeed(new FirstStepResgisterInfoResponse
+            {
+                message = $"OTP has been verified successfully for email: {req.Email}"
+            }));
+        }
 
     }
 }
