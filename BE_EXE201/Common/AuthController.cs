@@ -88,9 +88,10 @@ public class AuthController : ControllerBase
     public IActionResult Login([FromBody] LoginRequest req)
     {
         var loginResult = _identityService.Login(req.Email, req.Password);
+
         if (!loginResult.Authenticated)
         {
-            return Unauthorized();
+            return Unauthorized(new { Message = loginResult.Message });
         }
 
         var handler = new JwtSecurityTokenHandler();
@@ -98,9 +99,14 @@ public class AuthController : ControllerBase
         {
             AccessToken = handler.WriteToken(loginResult.Token),
         };
+
         return Ok(ApiResult<LoginResponse>.Succeed(res));
     }
-   // [Authorize]
+
+
+
+
+    // [Authorize]
     [HttpGet]
     public async Task<IActionResult> CheckToken()
     {
