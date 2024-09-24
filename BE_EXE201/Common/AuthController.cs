@@ -7,17 +7,21 @@ using BE_EXE201.Services;
 
 using BE_EXE201.Common;
 using BE_EXE201.Exceptions;
+using BE_EXE201.Helpers;
+using BE_EXE201.Dtos.Auth;
 [Route("api/[controller]/[action]")]
 [ApiController]
 public class AuthController : ControllerBase
 {
     private readonly IdentityService _identityService;
     private readonly UserService _userService;
+    private readonly EmailService _emailService;
 
-    public AuthController(IdentityService identityService, UserService userService)
+    public AuthController(IdentityService identityService, UserService userService, EmailService emailService)
     {
         _identityService = identityService;
         _userService = userService;
+        _emailService = emailService;
     }
 
     [AllowAnonymous]
@@ -40,6 +44,44 @@ public class AuthController : ControllerBase
 
         return Ok(ApiResult<SignupResponse>.Succeed(result));
     }
+
+    [AllowAnonymous]
+    [HttpPost]
+    public async Task<IActionResult> ResendOTP([FromBody] ResendOTPRequest req)
+    {
+        try
+        {
+            var result = await _identityService.ResendOTP(req.Email);
+            if (!result)
+            {
+                var failResponse = new ResendOTPResponse
+                {
+                    Message = "Failed to resend OTP"
+                };
+                return BadRequest(ApiResult<ResendOTPResponse>.Error(failResponse));
+            }
+
+            var successResponse = new ResendOTPResponse
+            {
+                Message = "OTP has been resent successfully"
+            };
+            return Ok(ApiResult<ResendOTPResponse>.Succeed(successResponse));
+        }
+        catch (BadRequestException ex)
+        {
+            var failResponse = new ResendOTPResponse
+            {
+                Message = ex.Message
+            };
+            return BadRequest(ApiResult<ResendOTPResponse>.Error(failResponse));
+        }
+        catch (Exception ex)
+        {
+            return StatusCode(StatusCodes.Status500InternalServerError, ApiResult<object>.Fail(ex));
+        }
+    }
+
+
 
     [AllowAnonymous]
     [HttpPost]

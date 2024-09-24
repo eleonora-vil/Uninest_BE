@@ -223,7 +223,7 @@ namespace BE_EXE201.Services
             return _mapper.Map<UserModel>(user);
         }
 
-        public async Task<CreateUserModel> FirstStep(CreateUserModel req)
+      /*  public async Task<CreateUserModel> FirstStep(CreateUserModel req)
         {
             var userEntity = _mapper.Map<User>(req);
             var user = _userRepository.FindByCondition(x => x.Email == req.Email).FirstOrDefault();
@@ -268,7 +268,7 @@ namespace BE_EXE201.Services
             {
                 return null;
             }
-        }
+        }*/
 
 
 
