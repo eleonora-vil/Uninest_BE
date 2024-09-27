@@ -11,7 +11,11 @@ namespace BE_EXE201.Mapper
         {
             CreateMap<User, UserModel>().ReverseMap();
             CreateMap<UserRole, UserRoleModel>().ReverseMap();
-           
+            CreateMap<Home, HomeModel>().ReverseMap();
+            CreateMap<Image, ImageModel>().ReverseMap();
+            CreateMap<Location, LocationModel>().ReverseMap();
+            CreateMap<Report, ReportModel>().ReverseMap();
+            CreateMap<Utilities, UtilitiesModel>().ReverseMap();
         }
     }
 }
