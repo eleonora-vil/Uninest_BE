@@ -42,6 +42,8 @@ namespace BE_EXE201.Services
             }
             var userRoleEntity = _userRoleRepository.FindByCondition(ur => ur.RoleId == newUser.RoleID).FirstOrDefault();
 
+            userEntity.AvatarUrl = GravatarHelper.GetGravatarUrl(newUser.Email);
+
             userEntity.UserRole = userRoleEntity!;
 
             await _userRepository.AddAsync(userEntity);

@@ -37,5 +37,10 @@ namespace BE_EXE201.Dtos
         public int RoleID { get; set; }
 
         public string RoleName { get; set; }
+
+        [MaxLength(255)]
+        public string AvatarUrl { get; set; }
+
+        public float? Wallet { get; set; }
     }
 }
