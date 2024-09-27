@@ -48,5 +48,10 @@ namespace BE_EXE201.Entities
         [ForeignKey("UserRole")]
         public int RoleID { get; set; }
         public virtual UserRole UserRole { get; set; }
+
+        [MaxLength(255)]
+        public string AvatarUrl { get; set; }
+
+        public float? Wallet { get; set; }
     }
 }
