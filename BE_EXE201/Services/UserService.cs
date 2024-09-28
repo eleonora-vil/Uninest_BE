@@ -44,6 +44,8 @@ namespace BE_EXE201.Services
 
             userEntity.UserRole = userRoleEntity!;
 
+            userEntity.AvatarUrl = GravatarHelper.GetGravatarUrl(newUser.Email);
+
             await _userRepository.AddAsync(userEntity);
             var result = await _userRepository.Commit();
             if (result > 0)
