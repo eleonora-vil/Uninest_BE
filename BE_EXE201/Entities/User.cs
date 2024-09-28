@@ -50,7 +50,7 @@ namespace BE_EXE201.Entities
         public virtual UserRole UserRole { get; set; }
 
         [MaxLength(255)]
-        public string AvatarUrl { get; set; }
+        public string? AvatarUrl { get; set; }
 
         public float? Wallet { get; set; }
     }
