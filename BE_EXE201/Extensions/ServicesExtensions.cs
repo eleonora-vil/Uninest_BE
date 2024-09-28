@@ -11,6 +11,8 @@ using BE_EXE201.Helpers;
 using BE_EXE201.Middlewares;
 using MailKit;
 using BE_EXE201.Mapper;
+using BE_EXE201.Helpers.Photos;
+using BE_EXE201.Services;
 
 namespace BE_EXE201.Extensions;
 
@@ -42,6 +44,7 @@ public static class ServicesExtensions
         });
 
         services.Configure<MailSettings>(configuration.GetSection(nameof(MailSettings)));
+        services.Configure<CloundSettings>(configuration.GetSection(nameof(CloundSettings)));
 
         services.AddAuthorization();
 
@@ -74,7 +77,8 @@ public static class ServicesExtensions
         services.AddScoped<UserService>();
         services.AddScoped<UserRoleService>();
         services.AddScoped<EmailService>();
-
+        services.AddScoped<CloudService>();
+        services.AddScoped<ImageService>();
 
         return services;
     }
