@@ -14,6 +14,7 @@ namespace BE_EXE201.Entities
         public DbSet<Location> Locations { get; set; }
         public DbSet<Utilities> Utilities { get; set; }
         public DbSet<Home> Homes { get; set; }
+        public DbSet<HomeImage> HomeImages { get; set; }
         public DbSet<Report> Reports { get; set; }
         #endregion
         protected override void OnModelCreating(ModelBuilder modelBuilder)

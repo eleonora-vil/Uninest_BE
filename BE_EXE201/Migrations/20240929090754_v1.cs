@@ -5,24 +5,10 @@ using Microsoft.EntityFrameworkCore.Migrations;
 
 namespace BE_EXE201.Migrations
 {
-    public partial class v2 : Migration
+    public partial class v1 : Migration
     {
         protected override void Up(MigrationBuilder migrationBuilder)
         {
-            migrationBuilder.AddColumn<string>(
-                name: "AvatarUrl",
-                table: "User",
-                type: "nvarchar(255)",
-                maxLength: 255,
-                nullable: false,
-                defaultValue: "");
-
-            migrationBuilder.AddColumn<float>(
-                name: "Wallet",
-                table: "User",
-                type: "real",
-                nullable: true);
-
             migrationBuilder.CreateTable(
                 name: "Image",
                 columns: table => new
@@ -54,6 +40,19 @@ namespace BE_EXE201.Migrations
                 });
 
             migrationBuilder.CreateTable(
+                name: "UserRole",
+                columns: table => new
+                {
+                    RoleId = table.Column<int>(type: "int", nullable: false)
+                        .Annotation("SqlServer:Identity", "1, 1"),
+                    RoleName = table.Column<string>(type: "nvarchar(50)", maxLength: 50, nullable: false)
+                },
+                constraints: table =>
+                {
+                    table.PrimaryKey("PK_UserRole", x => x.RoleId);
+                });
+
+            migrationBuilder.CreateTable(
                 name: "Utilities",
                 columns: table => new
                 {
@@ -74,6 +73,38 @@ namespace BE_EXE201.Migrations
                 });
 
             migrationBuilder.CreateTable(
+                name: "User",
+                columns: table => new
+                {
+                    UserId = table.Column<int>(type: "int", nullable: false)
+                        .Annotation("SqlServer:Identity", "1, 1"),
+                    UserName = table.Column<string>(type: "nvarchar(255)", maxLength: 255, nullable: false),
+                    Password = table.Column<string>(type: "nvarchar(100)", maxLength: 100, nullable: false),
+                    OTPCode = table.Column<string>(type: "nvarchar(max)", nullable: true),
+                    FullName = table.Column<string>(type: "nvarchar(50)", maxLength: 50, nullable: false),
+                    Email = table.Column<string>(type: "nvarchar(255)", maxLength: 255, nullable: false),
+                    Gender = table.Column<string>(type: "nvarchar(100)", maxLength: 100, nullable: false),
+                    Address = table.Column<string>(type: "nvarchar(255)", maxLength: 255, nullable: false),
+                    BirthDate = table.Column<DateTime>(type: "datetime2", nullable: false),
+                    PhoneNumber = table.Column<string>(type: "nvarchar(15)", maxLength: 15, nullable: false),
+                    CreateDate = table.Column<DateTime>(type: "datetime2", nullable: false),
+                    Status = table.Column<string>(type: "nvarchar(max)", nullable: false),
+                    RoleID = table.Column<int>(type: "int", nullable: false),
+                    AvatarUrl = table.Column<string>(type: "nvarchar(255)", maxLength: 255, nullable: true),
+                    Wallet = table.Column<float>(type: "real", nullable: true)
+                },
+                constraints: table =>
+                {
+                    table.PrimaryKey("PK_User", x => x.UserId);
+                    table.ForeignKey(
+                        name: "FK_User_UserRole_RoleID",
+                        column: x => x.RoleID,
+                        principalTable: "UserRole",
+                        principalColumn: "RoleId",
+                        onDelete: ReferentialAction.Cascade);
+                });
+
+            migrationBuilder.CreateTable(
                 name: "Home",
                 columns: table => new
                 {
@@ -82,28 +113,15 @@ namespace BE_EXE201.Migrations
                     Name = table.Column<string>(type: "nvarchar(100)", maxLength: 100, nullable: false),
                     Price = table.Column<float>(type: "real", nullable: true),
                     Size = table.Column<float>(type: "real", nullable: true),
-                    Description = table.Column<string>(type: "nvarchar(255)", maxLength: 255, nullable: true),
+                    Description = table.Column<string>(type: "nvarchar(max)", nullable: true),
                     Bathroom = table.Column<int>(type: "int", nullable: true),
                     Bedrooms = table.Column<int>(type: "int", nullable: true),
-                    HouseStatus = table.Column<string>(type: "nvarchar(max)", nullable: true),
-                    Status = table.Column<string>(type: "nvarchar(max)", nullable: true),
-                    CreateDate = table.Column<DateTimeOffset>(type: "datetimeoffset", nullable: true),
-                    ModifyDate = table.Column<DateTimeOffset>(type: "datetimeoffset", nullable: true),
-                    CreateBy = table.Column<string>(type: "nvarchar(max)", nullable: true),
-                    ModifyBy = table.Column<string>(type: "nvarchar(max)", nullable: true),
-                    ApproveStatus = table.Column<string>(type: "nvarchar(max)", nullable: true),
-                    ImageId = table.Column<int>(type: "int", nullable: true),
                     LocationId = table.Column<int>(type: "int", nullable: true),
                     UtilitiesId = table.Column<int>(type: "int", nullable: true)
                 },
                 constraints: table =>
                 {
                     table.PrimaryKey("PK_Home", x => x.HomeId);
-                    table.ForeignKey(
-                        name: "FK_Home_Image_ImageId",
-                        column: x => x.ImageId,
-                        principalTable: "Image",
-                        principalColumn: "ImageId");
                     table.ForeignKey(
                         name: "FK_Home_Location_LocationId",
                         column: x => x.LocationId,
@@ -114,6 +132,33 @@ namespace BE_EXE201.Migrations
                         column: x => x.UtilitiesId,
                         principalTable: "Utilities",
                         principalColumn: "UtilitiesId");
+                });
+
+            migrationBuilder.CreateTable(
+                name: "HomeImage",
+                columns: table => new
+                {
+                    HomeImageId = table.Column<int>(type: "int", nullable: false)
+                        .Annotation("SqlServer:Identity", "1, 1"),
+                    HomeId = table.Column<int>(type: "int", nullable: false),
+                    ImageId = table.Column<int>(type: "int", nullable: false),
+                    ImageDescription = table.Column<string>(type: "nvarchar(max)", nullable: true)
+                },
+                constraints: table =>
+                {
+                    table.PrimaryKey("PK_HomeImage", x => x.HomeImageId);
+                    table.ForeignKey(
+                        name: "FK_HomeImage_Home_HomeId",
+                        column: x => x.HomeId,
+                        principalTable: "Home",
+                        principalColumn: "HomeId",
+                        onDelete: ReferentialAction.Cascade);
+                    table.ForeignKey(
+                        name: "FK_HomeImage_Image_ImageId",
+                        column: x => x.ImageId,
+                        principalTable: "Image",
+                        principalColumn: "ImageId",
+                        onDelete: ReferentialAction.Cascade);
                 });
 
             migrationBuilder.CreateTable(
@@ -139,11 +184,6 @@ namespace BE_EXE201.Migrations
                 });
 
             migrationBuilder.CreateIndex(
-                name: "IX_Home_ImageId",
-                table: "Home",
-                column: "ImageId");
-
-            migrationBuilder.CreateIndex(
                 name: "IX_Home_LocationId",
                 table: "Home",
                 column: "LocationId");
@@ -154,35 +194,51 @@ namespace BE_EXE201.Migrations
                 column: "UtilitiesId");
 
             migrationBuilder.CreateIndex(
+                name: "IX_HomeImage_HomeId",
+                table: "HomeImage",
+                column: "HomeId");
+
+            migrationBuilder.CreateIndex(
+                name: "IX_HomeImage_ImageId",
+                table: "HomeImage",
+                column: "ImageId");
+
+            migrationBuilder.CreateIndex(
                 name: "IX_Report_HomeId",
                 table: "Report",
                 column: "HomeId");
+
+            migrationBuilder.CreateIndex(
+                name: "IX_User_RoleID",
+                table: "User",
+                column: "RoleID");
         }
 
         protected override void Down(MigrationBuilder migrationBuilder)
         {
             migrationBuilder.DropTable(
+                name: "HomeImage");
+
+            migrationBuilder.DropTable(
                 name: "Report");
+
+            migrationBuilder.DropTable(
+                name: "User");
+
+            migrationBuilder.DropTable(
+                name: "Image");
 
             migrationBuilder.DropTable(
                 name: "Home");
 
             migrationBuilder.DropTable(
-                name: "Image");
+                name: "UserRole");
 
             migrationBuilder.DropTable(
                 name: "Location");
 
             migrationBuilder.DropTable(
                 name: "Utilities");
-
-            migrationBuilder.DropColumn(
-                name: "AvatarUrl",
-                table: "User");
-
-            migrationBuilder.DropColumn(
-                name: "Wallet",
-                table: "User");
         }
     }
 }

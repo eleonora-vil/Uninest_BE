@@ -79,6 +79,7 @@ public static class ServicesExtensions
         services.AddScoped<EmailService>();
         services.AddScoped<CloudService>();
         services.AddScoped<ImageService>();
+        services.AddScoped<HomeService>();
 
         return services;
     }

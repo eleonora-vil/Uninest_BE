@@ -6,7 +6,7 @@ namespace BE_EXE201.Dtos
 {
     public class HomeModel
     {
-        public int HomeId { get; set; }
+        public int? HomeId { get; set; }
 
         [Required]
         [MaxLength(100)]
@@ -22,30 +22,25 @@ namespace BE_EXE201.Dtos
 
         public int? Bedrooms { get; set; }
 
-        public string? HouseStatus { get; set; }
+     //   public string? HouseStatus { get; set; }
+     
+     //   public string? Status { get; set; }
 
-        public string? Status { get; set; }
+     // public DateTimeOffset? CreateDate { get; set; }
 
-        public DateTimeOffset? CreateDate { get; set; }
+     //   public DateTimeOffset? ModifyDate { get; set; }
 
-        public DateTimeOffset? ModifyDate { get; set; }
+     //   public string? CreateBy { get; set; }
 
-        public string? CreateBy { get; set; }
+     //   public string? ModifyBy { get; set; }
 
-        public string? ModifyBy { get; set; }
+     //   public string? ApproveStatus { get; set; }
 
-        public string? ApproveStatus { get; set; }
-
-        public int? ImageId { get; set; }
-
+        // Foreign keys for Location and Utilities
         public int? LocationId { get; set; }
-
         public int? UtilitiesId { get; set; }
 
-        public Image? Image { get; set; }
+        // public ICollection<HomeImageModel> HomeImages { get; set; } = new List<HomeImageModel>();
 
-        public Location? Location { get; set; }
-
-        public Utilities? Utilities { get; set; }
     }
 }

@@ -12,8 +12,8 @@ using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 namespace BE_EXE201.Migrations
 {
     [DbContext(typeof(AppDbContext))]
-    [Migration("20240927061924_v2")]
-    partial class v2
+    [Migration("20240929090754_v1")]
+    partial class v1
     {
         protected override void BuildTargetModel(ModelBuilder modelBuilder)
         {
@@ -32,39 +32,17 @@ namespace BE_EXE201.Migrations
 
                     SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("HomeId"), 1L, 1);
 
-                    b.Property<string>("ApproveStatus")
-                        .HasColumnType("nvarchar(max)");
-
                     b.Property<int?>("Bathroom")
                         .HasColumnType("int");
 
                     b.Property<int?>("Bedrooms")
                         .HasColumnType("int");
 
-                    b.Property<string>("CreateBy")
-                        .HasColumnType("nvarchar(max)");
-
-                    b.Property<DateTimeOffset?>("CreateDate")
-                        .HasColumnType("datetimeoffset");
-
                     b.Property<string>("Description")
-                        .HasMaxLength(255)
-                        .HasColumnType("nvarchar(255)");
-
-                    b.Property<string>("HouseStatus")
                         .HasColumnType("nvarchar(max)");
-
-                    b.Property<int?>("ImageId")
-                        .HasColumnType("int");
 
                     b.Property<int?>("LocationId")
                         .HasColumnType("int");
-
-                    b.Property<string>("ModifyBy")
-                        .HasColumnType("nvarchar(max)");
-
-                    b.Property<DateTimeOffset?>("ModifyDate")
-                        .HasColumnType("datetimeoffset");
 
                     b.Property<string>("Name")
                         .IsRequired()
@@ -77,21 +55,42 @@ namespace BE_EXE201.Migrations
                     b.Property<float?>("Size")
                         .HasColumnType("real");
 
-                    b.Property<string>("Status")
-                        .HasColumnType("nvarchar(max)");
-
                     b.Property<int?>("UtilitiesId")
                         .HasColumnType("int");
 
                     b.HasKey("HomeId");
-
-                    b.HasIndex("ImageId");
 
                     b.HasIndex("LocationId");
 
                     b.HasIndex("UtilitiesId");
 
                     b.ToTable("Home");
+                });
+
+            modelBuilder.Entity("BE_EXE201.Entities.HomeImage", b =>
+                {
+                    b.Property<int>("HomeImageId")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("int");
+
+                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("HomeImageId"), 1L, 1);
+
+                    b.Property<int>("HomeId")
+                        .HasColumnType("int");
+
+                    b.Property<string>("ImageDescription")
+                        .HasColumnType("nvarchar(max)");
+
+                    b.Property<int>("ImageId")
+                        .HasColumnType("int");
+
+                    b.HasKey("HomeImageId");
+
+                    b.HasIndex("HomeId");
+
+                    b.HasIndex("ImageId");
+
+                    b.ToTable("HomeImage");
                 });
 
             modelBuilder.Entity("BE_EXE201.Entities.Image", b =>
@@ -190,7 +189,6 @@ namespace BE_EXE201.Migrations
                         .HasColumnType("nvarchar(255)");
 
                     b.Property<string>("AvatarUrl")
-                        .IsRequired()
                         .HasMaxLength(255)
                         .HasColumnType("nvarchar(255)");
 
@@ -307,10 +305,6 @@ namespace BE_EXE201.Migrations
 
             modelBuilder.Entity("BE_EXE201.Entities.Home", b =>
                 {
-                    b.HasOne("BE_EXE201.Entities.Image", "Image")
-                        .WithMany()
-                        .HasForeignKey("ImageId");
-
                     b.HasOne("BE_EXE201.Entities.Location", "Location")
                         .WithMany()
                         .HasForeignKey("LocationId");
@@ -319,11 +313,28 @@ namespace BE_EXE201.Migrations
                         .WithMany()
                         .HasForeignKey("UtilitiesId");
 
-                    b.Navigation("Image");
-
                     b.Navigation("Location");
 
                     b.Navigation("Utilities");
+                });
+
+            modelBuilder.Entity("BE_EXE201.Entities.HomeImage", b =>
+                {
+                    b.HasOne("BE_EXE201.Entities.Home", "Home")
+                        .WithMany("HomeImages")
+                        .HasForeignKey("HomeId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.HasOne("BE_EXE201.Entities.Image", "Image")
+                        .WithMany()
+                        .HasForeignKey("ImageId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.Navigation("Home");
+
+                    b.Navigation("Image");
                 });
 
             modelBuilder.Entity("BE_EXE201.Entities.Report", b =>
@@ -344,6 +355,11 @@ namespace BE_EXE201.Migrations
                         .IsRequired();
 
                     b.Navigation("UserRole");
+                });
+
+            modelBuilder.Entity("BE_EXE201.Entities.Home", b =>
+                {
+                    b.Navigation("HomeImages");
                 });
 #pragma warning restore 612, 618
         }

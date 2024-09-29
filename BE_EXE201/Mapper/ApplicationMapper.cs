@@ -7,15 +7,19 @@ namespace BE_EXE201.Mapper
 {
     public class ApplicationMapper : Profile
     {
-        public ApplicationMapper() 
+        public ApplicationMapper()
         {
             CreateMap<User, UserModel>().ReverseMap();
             CreateMap<UserRole, UserRoleModel>().ReverseMap();
+
+            // Home and related entities
             CreateMap<Home, HomeModel>().ReverseMap();
+            CreateMap<HomeImage, HomeImageModel>().ReverseMap(); // Map HomeImage
             CreateMap<Image, ImageModel>().ReverseMap();
             CreateMap<Location, LocationModel>().ReverseMap();
-            CreateMap<Report, ReportModel>().ReverseMap();
             CreateMap<Utilities, UtilitiesModel>().ReverseMap();
+
+            CreateMap<Report, ReportModel>().ReverseMap();
         }
     }
 }
