@@ -9,6 +9,7 @@ using BE_EXE201.Helpers;
 using BE_EXE201.Repositories;
 using Microsoft.IdentityModel.Tokens;
 using System.IdentityModel.Tokens.Jwt;
+using BE_EXE201.Dtos.Payment;
 
 namespace BE_EXE201.Services
 {
@@ -18,13 +19,20 @@ namespace BE_EXE201.Services
         private readonly IMapper _mapper;
         private readonly IRepository<UserRole, int> _userRoleRepository;
         private readonly EmailService _emailService;
+        private readonly IRepository<PaymentTransaction, int> _paymentTransactionRepository;
 
-        public UserService(IRepository<User, int> userRepository, IMapper mapper,IRepository<UserRole,int>userRoleRepository, EmailService emailService)
+        public UserService(
+            IRepository<User, int> userRepository,
+            IMapper mapper,
+            IRepository<UserRole, int> userRoleRepository,
+            EmailService emailService,
+            IRepository<PaymentTransaction, int> paymentTransactionRepository)
         {
             _userRepository = userRepository;
             _mapper = mapper;
             _userRoleRepository = userRoleRepository;
             _emailService = emailService;
+            _paymentTransactionRepository = paymentTransactionRepository;
         }
 
         public async Task<IEnumerable<UserModel>> GetAllUsers()
@@ -311,6 +319,40 @@ namespace BE_EXE201.Services
             }*/
         }
 
+        public async Task<User?> GetUserByOrderId(string orderId)
+        {
+            var transaction = _paymentTransactionRepository
+                .FindByCondition(pt => pt.OrderId == orderId)
+                .FirstOrDefault();
+
+            if (transaction is not null)
+            {
+                return await _userRepository.GetByIdAsync(transaction.UserId);
+            }
+            return null;
+        }
+        public async Task UpdateUserWallet(User user, VnPaymentResponseModel paymentResponse)
+        {
+            // Increase user's wallet balance by payment amount
+            user.Wallet += paymentResponse.Amount;
+            _userRepository.Update(user);
+
+            // Save the payment transaction
+            var paymentTransaction = new PaymentTransaction
+            {
+                UserId = user.UserId,
+                OrderId = paymentResponse.OrderId,
+                TransactionId = paymentResponse.TransactionId,
+                Amount = (decimal)paymentResponse.Amount,
+                Status = "Success",
+                CreatedDate = DateTime.Now
+            };
+            await _paymentTransactionRepository.AddAsync(paymentTransaction);
+
+            // Commit both changes
+            await _userRepository.Commit();
+            await _paymentTransactionRepository.Commit();
+        }
 
     }
 

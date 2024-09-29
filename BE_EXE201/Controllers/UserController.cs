@@ -10,6 +10,7 @@ using BE_EXE201.Exceptions;
 using BE_EXE201.Helpers;
 using BE_EXE201.Services;
 using BE_EXE201.Validation;
+using BE_EXE201.Extensions.NewFolder;
 
 namespace BE_EXE201.Controllers
 {
@@ -21,13 +22,15 @@ namespace BE_EXE201.Controllers
         private readonly UserRoleService _userRoleService;
         private readonly IdentityService _identityService;
         private readonly EmailService _emailService;
+        private readonly IVnPayService _vnPayService;
 
-        public UserController(UserService userService, UserRoleService userRoleService, IdentityService identityService, EmailService emailService)
+        public UserController(UserService userService, UserRoleService userRoleService, IdentityService identityService, EmailService emailService, IVnPayService vnPayService)
         {
             _userService = userService;
             _userRoleService = userRoleService;
             _identityService = identityService;
             _emailService = emailService;
+            _vnPayService = vnPayService;
         }
         [HttpGet("GetAll")]
       // [Authorize(Roles = "Admin")]
@@ -187,6 +190,7 @@ namespace BE_EXE201.Controllers
                 message = $"OTP has been verified successfully for email: {req.Email}"
             }));
         }
+
 
     }
 }

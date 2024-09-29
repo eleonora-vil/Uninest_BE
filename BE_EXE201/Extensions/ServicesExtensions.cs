@@ -13,6 +13,7 @@ using MailKit;
 using BE_EXE201.Mapper;
 using BE_EXE201.Helpers.Photos;
 using BE_EXE201.Services;
+using BE_EXE201.Extensions.NewFolder;
 
 namespace BE_EXE201.Extensions;
 
@@ -80,6 +81,8 @@ public static class ServicesExtensions
         services.AddScoped<CloudService>();
         services.AddScoped<ImageService>();
         services.AddScoped<HomeService>();
+        services.AddScoped<IVnPayService, VnPayService>();
+
 
         return services;
     }
