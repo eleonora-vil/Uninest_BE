@@ -73,7 +73,7 @@ public static class ServicesExtensions
         });
 
         services.AddScoped(typeof(IRepository<,>), typeof(GenericRepository<,>));
-       // services.AddScoped<DatabaseInitialiser>();
+        // services.AddScoped<DatabaseInitialiser>();
         services.AddScoped<IdentityService>();
         services.AddScoped<UserService>();
         services.AddScoped<UserRoleService>();
@@ -81,6 +81,7 @@ public static class ServicesExtensions
         services.AddScoped<CloudService>();
         services.AddScoped<ImageService>();
         services.AddScoped<HomeService>();
+        services.AddScoped<DashboardServices>();
         services.AddScoped<IVnPayService, VnPayService>();
 
 

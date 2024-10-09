@@ -45,4 +45,24 @@ where TEntity : class
     }
 
     public Task<int> Commit() => _dbContext.SaveChangesAsync();
+
+    public async Task<int> CountAsync()
+    {
+        return await _dbSet.CountAsync();
+    }
+    public async Task<decimal> SumAsync(Expression<Func<TEntity, bool>> predicate, Expression<Func<TEntity, decimal>> selector)
+    {
+        return await _dbSet.Where(predicate).SumAsync(selector);
+    }
+    public async Task<IEnumerable<TEntity>> GetLastSevenDaysTransactionsAsync(Expression<Func<TEntity, bool>> predicate)
+    {
+        var sevenDaysAgo = DateTime.Now.Date.AddDays(-6);
+        return await _dbSet.Where(predicate).Where(e => EF.Property<DateTime>(e, "CreatedDate") >= sevenDaysAgo).ToListAsync();
+    }
+    public async Task<IEnumerable<TEntity>> GetRecentUsersAsync(int count)
+    {
+        return await _dbSet.OrderByDescending(e => EF.Property<DateTime>(e, "CreateDate"))
+                           .Take(count)
+                           .ToListAsync();
+    }
 }

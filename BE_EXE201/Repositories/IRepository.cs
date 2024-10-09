@@ -11,4 +11,10 @@ public interface IRepository<TEntity, in TKey>
     TEntity Update(TEntity entity);
     TEntity Remove(TKey id);
     Task<int> Commit();
+    Task<int> CountAsync();
+    Task<decimal> SumAsync(Expression<Func<TEntity, bool>> predicate, Expression<Func<TEntity, decimal>> selector);
+    Task<IEnumerable<TEntity>> GetLastSevenDaysTransactionsAsync(Expression<Func<TEntity, bool>> predicate);
+    Task<IEnumerable<TEntity>> GetRecentUsersAsync(int count);
+
+
 }
