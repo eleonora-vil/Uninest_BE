@@ -13,13 +13,21 @@ namespace BE_EXE201.Services
     {
         private readonly IRepository<Home, int> _homeRepository;
         private readonly IRepository<HomeImage, int> _homeImageRepository;
+        private readonly IRepository<Location, int> _locationRepository;
+        private readonly IRepository<Utilities, int> _utilitiesRepository;
         private readonly CloudService _cloudService;
         private readonly IMapper _mapper;
 
-        public HomeService(IRepository<Home, int> homeRepository, IRepository<HomeImage, int> homeImageRepository,CloudService cloudService, IMapper mapper)
+        public HomeService(IRepository<Home, int> homeRepository,
+            IRepository<HomeImage, int> homeImageRepository,
+            IRepository<Location,int> locationRepository,
+            IRepository<Utilities,int> utilitiesRepository,
+            CloudService cloudService, IMapper mapper)
         {
             _homeRepository = homeRepository;
             _homeImageRepository = homeImageRepository;
+            _locationRepository = locationRepository;
+            _utilitiesRepository = utilitiesRepository;
             _cloudService = cloudService;
             _mapper = mapper;
         }
@@ -113,43 +121,92 @@ namespace BE_EXE201.Services
         {
             var homeEntity = _mapper.Map<Home>(newHome);
 
-            // Make sure you don't set homeEntity.HomeId here.
-            // homeEntity.HomeId = newHome.HomeId; // Remove this line if it exists
-
-            // Upload images using CloudService
-            List<ImageUploadResult> uploadResults = await _cloudService.UploadImagesAsync(imageFiles);
-
-            // Handle adding new HomeImages with the uploaded URLs
-            if (uploadResults.Any())
+            // Create new Location entity
+            var locationEntity = new Location
             {
-                foreach (var uploadResult in uploadResults)
+                Province = newHome.Province, // Assuming these properties exist in HomeModel
+                District = newHome.District,
+                Town = newHome.Town,
+                Street = newHome.Street,
+                HouseNumber = newHome.HouseNumber
+            };
+
+            // Create new Utilities entity from user input
+            var utilitiesEntity = new Utilities
+            {
+                Elevator = newHome.Elevator,
+                SwimmingPool = newHome.SwimmingPool,
+                Gym = newHome.Gym,
+                TV = newHome.TV,
+                Refrigerator = newHome.Refrigerator,
+                Parking = newHome.Parking,
+                Balcony = newHome.Balcony,
+                AirConditioner = newHome.AirConditioner
+            };
+
+            try
+            {
+                // Save Location
+                await _locationRepository.AddAsync(locationEntity);
+                var locationResult = await _locationRepository.Commit();
+                if (locationResult <= 0)
                 {
-                    var homeImageEntity = new HomeImage
+                    throw new Exception("Failed to save the location.");
+                }
+
+                // Save Utilities
+                await _utilitiesRepository.AddAsync(utilitiesEntity);
+                var utilitiesResult = await _utilitiesRepository.Commit();
+                if (utilitiesResult <= 0)
+                {
+                    throw new Exception("Failed to save the utilities.");
+                }
+
+                // Assign IDs to HomeEntity
+                homeEntity.LocationId = locationEntity.LocationId; // Get the ID of the newly created location
+                homeEntity.UtilitiesId = utilitiesEntity.UtilitiesId; // Get the ID of the newly created utilities
+
+                // Upload images using CloudService
+                List<ImageUploadResult> uploadResults = await _cloudService.UploadImagesAsync(imageFiles);
+
+                // Handle adding new HomeImages with the uploaded URLs
+                if (uploadResults.Any())
+                {
+                    foreach (var uploadResult in uploadResults)
                     {
-                        Image = new Image
+                        var homeImageEntity = new HomeImage
                         {
-                            ImageUrl = uploadResult.SecureUrl.ToString()
-                        },
-                        ImageDescription = null // Optionally add descriptions here
-                    };
-                    homeEntity.HomeImages.Add(homeImageEntity);
+                            Image = new Image
+                            {
+                                ImageUrl = uploadResult.SecureUrl.ToString()
+                            },
+                            ImageDescription = null // Optionally add descriptions here
+                        };
+                        homeEntity.HomeImages.Add(homeImageEntity);
+                    }
+                }
+
+                // Save the home entity with the images
+                await _homeRepository.AddAsync(homeEntity);
+                var result = await _homeRepository.Commit();
+
+                if (result > 0)
+                {
+                    newHome.HomeId = homeEntity.HomeId; // This will be set after the entity is saved
+                    return newHome;
+                }
+                else
+                {
+                    throw new Exception("Failed to save the home entity.");
                 }
             }
-
-            // Save the home entity with the images
-            await _homeRepository.AddAsync(homeEntity);
-            var result = await _homeRepository.Commit();
-
-            if (result > 0)
+            catch (Exception ex)
             {
-                newHome.HomeId = homeEntity.HomeId; // This will be set after the entity is saved
-                return newHome;
-            }
-            else
-            {
-                return null;
+                // Log the error or handle it accordingly
+                throw new Exception("An error occurred while creating a new home: " + ex.Message);
             }
         }
+
 
 
 
@@ -158,11 +215,13 @@ namespace BE_EXE201.Services
         {
             try
             {
-                // Fetch the home with its associated images
+                // Fetch the home with its associated images, location, and utilities
                 var homeEntity = await _homeRepository
                     .GetAll()
                     .Include(h => h.HomeImages)
                     .ThenInclude(hi => hi.Image)
+                    .Include(h => h.Location) // Include Location for updates
+                    .Include(h => h.Utilities) // Include Utilities for updates
                     .FirstOrDefaultAsync(h => h.HomeId == homeId);
 
                 if (homeEntity != null)
@@ -175,9 +234,30 @@ namespace BE_EXE201.Services
                     if (req.Bathroom.HasValue) homeEntity.Bathroom = req.Bathroom.Value;
                     if (req.Bedrooms.HasValue) homeEntity.Bedrooms = req.Bedrooms.Value;
 
-                    // Update foreign key references
-                    if (req.LocationId.HasValue) homeEntity.LocationId = req.LocationId.Value;
-                    if (req.UtilitiesId.HasValue) homeEntity.UtilitiesId = req.UtilitiesId.Value;
+                    // Update Location properties if LocationId is provided
+                    if (homeEntity.Location != null)
+                    {
+                        // Update location properties from request
+                        if (!string.IsNullOrEmpty(req.Province)) homeEntity.Location.Province = req.Province;
+                        if (!string.IsNullOrEmpty(req.District)) homeEntity.Location.District = req.District;
+                        if (!string.IsNullOrEmpty(req.Town)) homeEntity.Location.Town = req.Town;
+                        if (!string.IsNullOrEmpty(req.Street)) homeEntity.Location.Street = req.Street;
+                        if (!string.IsNullOrEmpty(req.HouseNumber)) homeEntity.Location.HouseNumber = req.HouseNumber;
+                    }
+
+                    // Update Utilities properties if UtilitiesId is provided
+                    if (homeEntity.Utilities != null)
+                    {
+                        // Update utility properties from request
+                        if (req.Elevator.HasValue) homeEntity.Utilities.Elevator = req.Elevator.Value;
+                        if (req.SwimmingPool.HasValue) homeEntity.Utilities.SwimmingPool = req.SwimmingPool.Value;
+                        if (req.Gym.HasValue) homeEntity.Utilities.Gym = req.Gym.Value;
+                        if (req.TV.HasValue) homeEntity.Utilities.TV = req.TV.Value;
+                        if (req.Refrigerator.HasValue) homeEntity.Utilities.Refrigerator = req.Refrigerator.Value;
+                        if (req.Parking.HasValue) homeEntity.Utilities.Parking = req.Parking.Value;
+                        if (req.Balcony.HasValue) homeEntity.Utilities.Balcony = req.Balcony.Value;
+                        if (req.AirConditioner.HasValue) homeEntity.Utilities.AirConditioner = req.AirConditioner.Value;
+                    }
 
                     // Handle HomeImage updates (add new or update existing)
                     if (req.HomeImages != null)
@@ -190,8 +270,8 @@ namespace BE_EXE201.Services
                                 var existingImage = homeEntity.HomeImages.FirstOrDefault(hi => hi.HomeImageId == updatedImage.HomeImageId);
                                 if (existingImage != null)
                                 {
-                                    existingImage.ImageDescription = updatedImage.ImageDescription;
-                                    // If needed, you can also update the `ImageId` or related fields here
+                                    //existingImage.ImageDescription = updatedImage.ImageDescription;
+                                    // Update additional image properties if needed
                                 }
                             }
                             else
@@ -200,7 +280,7 @@ namespace BE_EXE201.Services
                                 var newHomeImage = new HomeImage
                                 {
                                     ImageId = updatedImage.ImageId.Value, // Assuming ImageId is mandatory for new images
-                                    ImageDescription = updatedImage.ImageDescription
+                                  //  ImageDescription = updatedImage.ImageDescription
                                 };
                                 homeEntity.HomeImages.Add(newHomeImage);
                             }
@@ -222,9 +302,12 @@ namespace BE_EXE201.Services
             catch (Exception ex)
             {
                 Console.WriteLine($"Error updating home: {ex.Message}");
+                // Consider logging the exception or rethrowing a custom exception if needed
                 return null;
             }
         }
+
+
 
 
         // Delete home (and its images)

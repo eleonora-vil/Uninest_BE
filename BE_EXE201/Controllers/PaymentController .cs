@@ -45,27 +45,34 @@ namespace BE_EXE201.Controllers
         [HttpGet("PaymentCallback")]
         public async Task<IActionResult> PaymentCallback([FromQuery] IQueryCollection collections)
         {
-            var paymentResponse = _vnPayService.PaymentExecute(collections);
-
-            if (paymentResponse.Success)
+            try
             {
-                // Fetch user using the OrderId and update their wallet
-                var user = await _userService.GetUserByOrderId(paymentResponse.OrderId);
+                var paymentResponse = _vnPayService.PaymentExecute(collections);
 
-                if (user is not null)
+                if (paymentResponse.Success)
                 {
-                    await _userService.UpdateUserWallet(user, paymentResponse);
-                    return Ok(new { message = "Transaction successful and wallet updated." });
+                    var user = await _userService.GetUserByOrderId(paymentResponse.OrderId);
+                    if (user is not null)
+                    {
+                        await _userService.UpdateUserWallet(user, paymentResponse);
+                        return Ok(new { message = "Transaction successful and wallet updated." });
+                    }
+                    else
+                    {
+                        return NotFound("User not found.");
+                    }
                 }
                 else
                 {
-                    return NotFound("User not found.");
+                    return BadRequest(new { message = "Transaction failed." });
                 }
             }
-            else
+            catch (Exception ex)
             {
-                return BadRequest(new { message = "Transaction failed." });
+                // Log lỗi chi tiết
+                return StatusCode(500, new { message = ex.Message });
             }
         }
+
     }
 }

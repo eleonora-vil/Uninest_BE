@@ -22,24 +22,33 @@ namespace BE_EXE201.Dtos
 
         public int? Bedrooms { get; set; }
 
-     //   public string? HouseStatus { get; set; }
-     
-     //   public string? Status { get; set; }
+        // Location details
+        [Required]
+        [MaxLength(50)]
+        public string Province { get; set; }
 
-     // public DateTimeOffset? CreateDate { get; set; }
+        [Required]
+        [MaxLength(50)]
+        public string District { get; set; }
 
-     //   public DateTimeOffset? ModifyDate { get; set; }
+        [MaxLength(50)]
+        public string Town { get; set; }
 
-     //   public string? CreateBy { get; set; }
+        [MaxLength(50)]
+        public string Street { get; set; }
 
-     //   public string? ModifyBy { get; set; }
+        [MaxLength(50)]
+        public string? HouseNumber { get; set; }
 
-     //   public string? ApproveStatus { get; set; }
-
-        // Foreign keys for Location and Utilities
-        public int? LocationId { get; set; }
-        public int? UtilitiesId { get; set; }
-
+        // Utilities details
+        public bool? Elevator { get; set; }
+        public bool? SwimmingPool { get; set; }
+        public bool? Gym { get; set; }
+        public bool? TV { get; set; }
+        public bool? Refrigerator { get; set; }
+        public bool? Parking { get; set; }
+        public bool? Balcony { get; set; }
+        public bool? AirConditioner { get; set; }
         // public ICollection<HomeImageModel> HomeImages { get; set; } = new List<HomeImageModel>();
 
     }

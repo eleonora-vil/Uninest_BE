@@ -1,4 +1,5 @@
 
+using BE_EXE201.Data;
 using BE_EXE201.Entities;
 using BE_EXE201.Extensions;
 using BE_EXE201.Middlewares;
@@ -53,7 +54,7 @@ public class Program
         app.Lifetime.ApplicationStarted.Register(async () =>
         {
             // Database Initialiser 
-          //  await app.InitialiseDatabaseAsync();
+            await app.InitialiseDatabaseAsync();
         });
         // Configure the HTTP request pipeline.
         if (app.Environment.IsDevelopment())

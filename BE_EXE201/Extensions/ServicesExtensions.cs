@@ -14,6 +14,7 @@ using BE_EXE201.Mapper;
 using BE_EXE201.Helpers.Photos;
 using BE_EXE201.Services;
 using BE_EXE201.Extensions.NewFolder;
+using BE_EXE201.Data;
 
 namespace BE_EXE201.Extensions;
 
@@ -73,7 +74,7 @@ public static class ServicesExtensions
         });
 
         services.AddScoped(typeof(IRepository<,>), typeof(GenericRepository<,>));
-       // services.AddScoped<DatabaseInitialiser>();
+        services.AddScoped<DatabaseInitialiser>();
         services.AddScoped<IdentityService>();
         services.AddScoped<UserService>();
         services.AddScoped<UserRoleService>();
