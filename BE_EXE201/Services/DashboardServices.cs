@@ -1,5 +1,7 @@
-﻿/*using BE_EXE201.Entities;
+﻿using BE_EXE201.Dtos;
+using BE_EXE201.Entities;
 using BE_EXE201.Repositories;
+using Microsoft.EntityFrameworkCore;
 using System.Linq.Expressions;
 
 namespace BE_EXE201.Services
@@ -44,7 +46,7 @@ namespace BE_EXE201.Services
             var transactions = await _paymentTransactionRepository.GetLastSevenDaysTransactionsAsync(predicate);
 
             var groupedTransactions = transactions
-                .GroupBy(t => t.CreatedDate.Date)
+                .GroupBy(t => t.UpdatedDate.Date)
                 .Select(g => new
                 {
                     Date = g.Key.DayOfWeek.ToString(),
@@ -75,7 +77,20 @@ namespace BE_EXE201.Services
                 AvatarUrl = u.AvatarUrl
             });
         }
+        public async Task<IEnumerable<RecentTransactionModel>> GetRecentTransactions(int count = 10)
+        {
+            var recentTransactions = await _paymentTransactionRepository.GetRecentTransactionsAsync(count);
+            var userIds = recentTransactions.Select(t => t.UserId).Distinct().ToList();
+            var users = await _userRepository.FindByCondition(u => userIds.Contains(u.UserId)).ToListAsync();
+
+            return recentTransactions.Select(t => new RecentTransactionModel
+            {
+                TransactionId = t.TransactionId,
+                Username = users.FirstOrDefault(u => u.UserId == t.UserId)?.UserName ?? "Unknown",
+                Status = t.Status,
+                Amount = t.Amount
+            });
+        }
 
     }
 }
-*/

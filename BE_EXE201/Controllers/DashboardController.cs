@@ -1,4 +1,5 @@
-﻿/*using BE_EXE201.Services;
+﻿using BE_EXE201.Dtos;
+using BE_EXE201.Services;
 using Microsoft.AspNetCore.Mvc;
 
 namespace BE_EXE201.Controllers
@@ -43,6 +44,20 @@ namespace BE_EXE201.Controllers
             var recentUsers = await _dashboardServices.GetRecentUsers(count);
             return Ok(recentUsers);
         }
+
+        [HttpGet("recent-transactions")]
+        public async Task<ActionResult<IEnumerable<RecentTransactionModel>>> GetRecentTransactions([FromQuery] int count = 10)
+        {
+            try
+            {
+                var recentTransactions = await _dashboardServices.GetRecentTransactions(count);
+                return Ok(recentTransactions);
+            }
+            catch (Exception ex)
+            {
+                // Log the exception
+                return StatusCode(500, "An error occurred while fetching recent transactions.");
+            }
+        }
     }
 }
-*/
