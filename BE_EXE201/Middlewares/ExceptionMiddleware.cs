@@ -29,7 +29,7 @@ public class ExceptionMiddleware : IMiddleware
         { typeof(BadRequestException), HandleBadRequestException },
     };
 
-    private Task HandleExceptionAsync(HttpContext context, Exception ex)
+   /* private Task HandleExceptionAsync(HttpContext context, Exception ex)
     {
         context.Response.ContentType = "application/json";
 
@@ -44,8 +44,26 @@ public class ExceptionMiddleware : IMiddleware
         Console.WriteLine(ex.ToString());
         return Task.CompletedTask;
     }
+*/
+    private Task HandleExceptionAsync(HttpContext context, Exception ex)
+    {
+        context.Response.ContentType = "application/json";
+        context.Response.StatusCode = StatusCodes.Status500InternalServerError;
 
-    
+        // Log detailed error for troubleshooting
+        Console.WriteLine($"Unhandled exception occurred: {ex.Message}, StackTrace: {ex.StackTrace}");
+
+        // Respond with detailed error
+        var errorResponse = new
+        {
+            StatusCode = context.Response.StatusCode,
+            Message = "Internal Server Error",
+            Details = ex.Message
+        };
+        return context.Response.WriteAsync(JsonSerializer.Serialize(errorResponse));
+    }
+
+
     private static async void HandleNotFoundException(HttpContext context, Exception ex)
     {
         context.Response.StatusCode = StatusCodes.Status404NotFound;

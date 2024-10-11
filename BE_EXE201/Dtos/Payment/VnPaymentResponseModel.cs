@@ -12,8 +12,9 @@
         public string Token { get; set; } // Security token returned by VNPay
         public string VnPayResponseCode { get; set; } // Response code returned by VNPay (e.g., "00" for success)
 
-        public float Amount { get; set; } // The amount paid in the transaction
+        public decimal Amount { get; set; } // The amount paid in the transaction
         public string WalletBalance { get; set; } // Optionally, include the updated wallet balance after payment
+        public string? Message {  get; set; } 
     }
 
 

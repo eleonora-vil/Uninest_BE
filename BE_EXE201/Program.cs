@@ -5,7 +5,6 @@ using BE_EXE201.Extensions;
 using BE_EXE201.Middlewares;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.OpenApi.Models;
-using System;
 
 public class Program
 {

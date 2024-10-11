@@ -12,8 +12,8 @@ using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 namespace BE_EXE201.Migrations
 {
     [DbContext(typeof(AppDbContext))]
-    [Migration("20240929090754_v1")]
-    partial class v1
+    [Migration("20241011060235_v5")]
+    partial class v5
     {
         protected override void BuildTargetModel(ModelBuilder modelBuilder)
         {
@@ -93,6 +93,39 @@ namespace BE_EXE201.Migrations
                     b.ToTable("HomeImage");
                 });
 
+            modelBuilder.Entity("BE_EXE201.Entities.HomePostingTransaction", b =>
+                {
+                    b.Property<int>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("int");
+
+                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("Id"), 1L, 1);
+
+                    b.Property<decimal>("Amount")
+                        .HasColumnType("decimal(18,2)");
+
+                    b.Property<int>("HomeId")
+                        .HasColumnType("int");
+
+                    b.Property<string>("Status")
+                        .IsRequired()
+                        .HasColumnType("nvarchar(max)");
+
+                    b.Property<DateTime>("TransactionDate")
+                        .HasColumnType("datetime2");
+
+                    b.Property<int>("UserId")
+                        .HasColumnType("int");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("HomeId");
+
+                    b.HasIndex("UserId");
+
+                    b.ToTable("HomePostingTransaction");
+                });
+
             modelBuilder.Entity("BE_EXE201.Entities.Image", b =>
                 {
                     b.Property<int>("ImageId")
@@ -142,6 +175,42 @@ namespace BE_EXE201.Migrations
                     b.HasKey("LocationId");
 
                     b.ToTable("Location");
+                });
+
+            modelBuilder.Entity("BE_EXE201.Entities.PaymentTransaction", b =>
+                {
+                    b.Property<int>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("int");
+
+                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("Id"), 1L, 1);
+
+                    b.Property<decimal>("Amount")
+                        .HasColumnType("decimal(18,2)");
+
+                    b.Property<string>("OrderId")
+                        .IsRequired()
+                        .HasColumnType("nvarchar(max)");
+
+                    b.Property<string>("Status")
+                        .IsRequired()
+                        .HasColumnType("nvarchar(max)");
+
+                    b.Property<string>("TransactionId")
+                        .IsRequired()
+                        .HasColumnType("nvarchar(max)");
+
+                    b.Property<DateTime>("UpdatedDate")
+                        .HasColumnType("datetime2");
+
+                    b.Property<int>("UserId")
+                        .HasColumnType("int");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("UserId");
+
+                    b.ToTable("PaymentTransaction");
                 });
 
             modelBuilder.Entity("BE_EXE201.Entities.Report", b =>
@@ -238,8 +307,8 @@ namespace BE_EXE201.Migrations
                         .HasMaxLength(255)
                         .HasColumnType("nvarchar(255)");
 
-                    b.Property<float?>("Wallet")
-                        .HasColumnType("real");
+                    b.Property<decimal?>("Wallet")
+                        .HasColumnType("decimal(18,2)");
 
                     b.HasKey("UserId");
 
@@ -335,6 +404,36 @@ namespace BE_EXE201.Migrations
                     b.Navigation("Home");
 
                     b.Navigation("Image");
+                });
+
+            modelBuilder.Entity("BE_EXE201.Entities.HomePostingTransaction", b =>
+                {
+                    b.HasOne("BE_EXE201.Entities.Home", "Home")
+                        .WithMany()
+                        .HasForeignKey("HomeId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.HasOne("BE_EXE201.Entities.User", "User")
+                        .WithMany()
+                        .HasForeignKey("UserId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.Navigation("Home");
+
+                    b.Navigation("User");
+                });
+
+            modelBuilder.Entity("BE_EXE201.Entities.PaymentTransaction", b =>
+                {
+                    b.HasOne("BE_EXE201.Entities.User", "User")
+                        .WithMany()
+                        .HasForeignKey("UserId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.Navigation("User");
                 });
 
             modelBuilder.Entity("BE_EXE201.Entities.Report", b =>

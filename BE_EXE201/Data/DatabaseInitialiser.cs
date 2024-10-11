@@ -83,7 +83,7 @@ namespace BE_EXE201.Data
                 Status = "Active",
                 UserRole = adminRole,
                 AvatarUrl = "",
-                Wallet = 1000.00f
+                Wallet = 1000
             };
 
             var ownerUser = new User
@@ -100,7 +100,7 @@ namespace BE_EXE201.Data
                 Status = "Active",
                 UserRole=ownerRole,
                 AvatarUrl = "",
-                Wallet = 500.00f
+                Wallet = 500
             };
 
             var tenantUser = new User
@@ -117,7 +117,7 @@ namespace BE_EXE201.Data
                 Status = "Active",
                 UserRole=tenantRole,
                 AvatarUrl = "",
-                Wallet = 200.00f
+                Wallet = 200
             };
 
             List<User> users = new List<User>()
