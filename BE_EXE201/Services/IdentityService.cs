@@ -45,6 +45,7 @@ public class IdentityService
             Gender = req.gender,
             Address = req.address,
             PhoneNumber = req.phone,
+            CreateDate = DateTime.Now,
             Status = "Inactive",
             RoleID = 2,
             OTPCode = otp.ToString()
