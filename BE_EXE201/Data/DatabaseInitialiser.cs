@@ -445,10 +445,10 @@ namespace BE_EXE201.Data
             // List of images
             var images = new List<Image>
     {
-        new Image { ImageUrl = "https://res.cloudinary.com/image1.png" },
-        new Image { ImageUrl = "https://res.cloudinary.com/image2.png" },
-        new Image { ImageUrl = "https://res.cloudinary.com/image3.png" },
-        new Image { ImageUrl = "https://res.cloudinary.com/image4.png" },
+        new Image { ImageUrl = "https://res.cloudinary.com/dnwqhc5th/image/upload/v1728546242/zglupgu2mocwga25fb8n.png" },
+        new Image { ImageUrl = "https://res.cloudinary.com/dnwqhc5th/image/upload/v1728546244/pxn18j8z8nckjhvu5xfh.png" },
+        new Image { ImageUrl = "https://res.cloudinary.com/dnwqhc5th/image/upload/v1728546246/dosboh4t4ean0c818any.png" },
+        new Image { ImageUrl = "https://res.cloudinary.com/dnwqhc5th/image/upload/v1728550453/rx50g6umi0rlnerzzwch.png" },
         new Image { ImageUrl = "https://res.cloudinary.com/dnwqhc5th/image/upload/v1728550453/rx50g6umi0rlnerzzwch.png" }, // Image for homeId 3
         new Image { ImageUrl = "https://res.cloudinary.com/dnwqhc5th/image/upload/v1728550456/j5rolk0eadzuyjkw4ts6.png" }, // Image for homeId 3
         new Image { ImageUrl = "https://res.cloudinary.com/dnwqhc5th/image/upload/v1728550458/liwsyepc8ntzc1mkwecz.png" }, // Image for homeId 3
