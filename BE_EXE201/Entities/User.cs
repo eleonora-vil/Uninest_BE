@@ -52,6 +52,6 @@ namespace BE_EXE201.Entities
         [MaxLength(255)]
         public string? AvatarUrl { get; set; }
 
-        public float? Wallet { get; set; }
+        public decimal? Wallet { get; set; }
     }
 }

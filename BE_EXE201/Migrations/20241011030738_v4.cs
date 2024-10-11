@@ -5,7 +5,7 @@ using Microsoft.EntityFrameworkCore.Migrations;
 
 namespace BE_EXE201.Migrations
 {
-    public partial class v1 : Migration
+    public partial class v4 : Migration
     {
         protected override void Up(MigrationBuilder migrationBuilder)
         {
@@ -91,7 +91,7 @@ namespace BE_EXE201.Migrations
                     Status = table.Column<string>(type: "nvarchar(max)", nullable: false),
                     RoleID = table.Column<int>(type: "int", nullable: false),
                     AvatarUrl = table.Column<string>(type: "nvarchar(255)", maxLength: 255, nullable: true),
-                    Wallet = table.Column<float>(type: "real", nullable: true)
+                    Wallet = table.Column<decimal>(type: "decimal(18,2)", nullable: true)
                 },
                 constraints: table =>
                 {
@@ -135,6 +135,30 @@ namespace BE_EXE201.Migrations
                 });
 
             migrationBuilder.CreateTable(
+                name: "PaymentTransaction",
+                columns: table => new
+                {
+                    Id = table.Column<int>(type: "int", nullable: false)
+                        .Annotation("SqlServer:Identity", "1, 1"),
+                    OrderId = table.Column<string>(type: "nvarchar(max)", nullable: false),
+                    UserId = table.Column<int>(type: "int", nullable: false),
+                    Amount = table.Column<decimal>(type: "decimal(18,2)", nullable: false),
+                    TransactionId = table.Column<string>(type: "nvarchar(max)", nullable: false),
+                    Status = table.Column<string>(type: "nvarchar(max)", nullable: false),
+                    CreatedDate = table.Column<DateTime>(type: "datetime2", nullable: false)
+                },
+                constraints: table =>
+                {
+                    table.PrimaryKey("PK_PaymentTransaction", x => x.Id);
+                    table.ForeignKey(
+                        name: "FK_PaymentTransaction_User_UserId",
+                        column: x => x.UserId,
+                        principalTable: "User",
+                        principalColumn: "UserId",
+                        onDelete: ReferentialAction.Cascade);
+                });
+
+            migrationBuilder.CreateTable(
                 name: "HomeImage",
                 columns: table => new
                 {
@@ -158,6 +182,35 @@ namespace BE_EXE201.Migrations
                         column: x => x.ImageId,
                         principalTable: "Image",
                         principalColumn: "ImageId",
+                        onDelete: ReferentialAction.Cascade);
+                });
+
+            migrationBuilder.CreateTable(
+                name: "HomePostingTransaction",
+                columns: table => new
+                {
+                    Id = table.Column<int>(type: "int", nullable: false)
+                        .Annotation("SqlServer:Identity", "1, 1"),
+                    UserId = table.Column<int>(type: "int", nullable: false),
+                    HomeId = table.Column<int>(type: "int", nullable: false),
+                    Amount = table.Column<decimal>(type: "decimal(18,2)", nullable: false),
+                    TransactionDate = table.Column<DateTime>(type: "datetime2", nullable: false),
+                    Status = table.Column<string>(type: "nvarchar(max)", nullable: false)
+                },
+                constraints: table =>
+                {
+                    table.PrimaryKey("PK_HomePostingTransaction", x => x.Id);
+                    table.ForeignKey(
+                        name: "FK_HomePostingTransaction_Home_HomeId",
+                        column: x => x.HomeId,
+                        principalTable: "Home",
+                        principalColumn: "HomeId",
+                        onDelete: ReferentialAction.Cascade);
+                    table.ForeignKey(
+                        name: "FK_HomePostingTransaction_User_UserId",
+                        column: x => x.UserId,
+                        principalTable: "User",
+                        principalColumn: "UserId",
                         onDelete: ReferentialAction.Cascade);
                 });
 
@@ -204,6 +257,21 @@ namespace BE_EXE201.Migrations
                 column: "ImageId");
 
             migrationBuilder.CreateIndex(
+                name: "IX_HomePostingTransaction_HomeId",
+                table: "HomePostingTransaction",
+                column: "HomeId");
+
+            migrationBuilder.CreateIndex(
+                name: "IX_HomePostingTransaction_UserId",
+                table: "HomePostingTransaction",
+                column: "UserId");
+
+            migrationBuilder.CreateIndex(
+                name: "IX_PaymentTransaction_UserId",
+                table: "PaymentTransaction",
+                column: "UserId");
+
+            migrationBuilder.CreateIndex(
                 name: "IX_Report_HomeId",
                 table: "Report",
                 column: "HomeId");
@@ -220,13 +288,19 @@ namespace BE_EXE201.Migrations
                 name: "HomeImage");
 
             migrationBuilder.DropTable(
+                name: "HomePostingTransaction");
+
+            migrationBuilder.DropTable(
+                name: "PaymentTransaction");
+
+            migrationBuilder.DropTable(
                 name: "Report");
 
             migrationBuilder.DropTable(
-                name: "User");
+                name: "Image");
 
             migrationBuilder.DropTable(
-                name: "Image");
+                name: "User");
 
             migrationBuilder.DropTable(
                 name: "Home");

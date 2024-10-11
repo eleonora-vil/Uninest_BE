@@ -331,28 +331,37 @@ namespace BE_EXE201.Services
             }
             return null;
         }
+
+
         public async Task UpdateUserWallet(User user, VnPaymentResponseModel paymentResponse)
         {
             // Increase user's wallet balance by payment amount
-            user.Wallet += paymentResponse.Amount;
+            user.Wallet += paymentResponse.Amount; // Ensure Amount is decimal
             _userRepository.Update(user);
 
-            // Save the payment transaction
-            var paymentTransaction = new PaymentTransaction
+            // Retrieve the existing payment transaction based on OrderId
+            var existingTransaction = await _paymentTransactionRepository
+                .FindByCondition(pt => pt.OrderId == paymentResponse.OrderId)
+                .FirstOrDefaultAsync();
+
+            if (existingTransaction != null)
             {
-                UserId = user.UserId,
-                OrderId = paymentResponse.OrderId,
-                TransactionId = paymentResponse.TransactionId,
-                Amount = (decimal)paymentResponse.Amount,
-                Status = "Success",
-                CreatedDate = DateTime.Now
-            };
-            await _paymentTransactionRepository.AddAsync(paymentTransaction);
+                // Update the existing transaction details
+                existingTransaction.TransactionId = paymentResponse.TransactionId;
+                existingTransaction.Amount = (decimal)paymentResponse.Amount;
+                existingTransaction.Status = "Success";
+                existingTransaction.UpdatedDate = DateTime.Now; // If you track updated dates
+            }
+            else
+            {
+                throw new TransactionNotFoundException($"Transaction with OrderId {paymentResponse.OrderId} not found.");
+            }
 
             // Commit both changes
-            await _userRepository.Commit();
-            await _paymentTransactionRepository.Commit();
+            await _userRepository.Commit(); // Commit user wallet update
+            await _paymentTransactionRepository.Commit(); // Commit transaction update
         }
+
 
     }
 

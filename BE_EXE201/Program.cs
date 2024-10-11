@@ -1,10 +1,10 @@
 
+using BE_EXE201.Data;
 using BE_EXE201.Entities;
 using BE_EXE201.Extensions;
 using BE_EXE201.Middlewares;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.OpenApi.Models;
-using System;
 
 public class Program
 {
@@ -53,7 +53,7 @@ public class Program
         app.Lifetime.ApplicationStarted.Register(async () =>
         {
             // Database Initialiser 
-          //  await app.InitialiseDatabaseAsync();
+            await app.InitialiseDatabaseAsync();
         });
         // Configure the HTTP request pipeline.
         if (app.Environment.IsDevelopment())

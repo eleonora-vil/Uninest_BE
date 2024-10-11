@@ -13,7 +13,7 @@ namespace BE_EXE201.Extensions.NewFolder
             _config = config;
         }
 
-        public string CreatePaymentUrl(HttpContext context, VnPaymentRequestModel model)
+        /*public string CreatePaymentUrl(HttpContext context, VnPaymentRequestModel model)
         {
             var tick = DateTime.Now.Ticks.ToString();
 
@@ -38,6 +38,39 @@ namespace BE_EXE201.Extensions.NewFolder
 
             return paymentUrl;
         }
+*/
+        public string CreatePaymentUrl(HttpContext context, VnPaymentRequestModel model)
+        {
+            var tick = DateTime.Now.Ticks.ToString();
+
+            var vnpay = new VnPayLibrary();
+
+            // Log the incoming payment request
+            Console.WriteLine($"Creating payment URL for OrderId: {model.OrderId}, Amount: {model.Amount}");
+
+            vnpay.AddRequestData("vnp_Version", _config["VnPay:Version"]);
+            vnpay.AddRequestData("vnp_Command", _config["VnPay:Command"]);
+            vnpay.AddRequestData("vnp_TmnCode", _config["VnPay:TmnCode"]);
+            vnpay.AddRequestData("vnp_Amount", (model.Amount * 100).ToString()); // Ensure correct amount format
+
+            vnpay.AddRequestData("vnp_CreateDate", model.CreatedDate.ToString("yyyyMMddHHmmss"));
+            vnpay.AddRequestData("vnp_CurrCode", _config["VnPay:CurrCode"]);
+            vnpay.AddRequestData("vnp_IpAddr", Utils.GetIpAddress(context));
+            vnpay.AddRequestData("vnp_Locale", _config["VnPay:Locale"]);
+            vnpay.AddRequestData("vnp_OrderInfo", $"Thanh toán cho đơn hàng: {model.OrderId}");
+            vnpay.AddRequestData("vnp_OrderType", "other");
+            vnpay.AddRequestData("vnp_ReturnUrl", _config["VnPay:PaymentBackReturnUrl"]);
+            vnpay.AddRequestData("vnp_TxnRef", tick); // Unique transaction reference
+
+            var paymentUrl = vnpay.CreateRequestUrl(_config["VnPay:BaseUrl"], _config["VnPay:HashSecret"]);
+
+            // Log the payment URL for verification
+            Console.WriteLine($"Generated payment URL: {paymentUrl}");
+
+            return paymentUrl;
+        }
+
+
 
         public VnPaymentResponseModel PaymentExecute(IQueryCollection collections)
         {
@@ -50,18 +83,40 @@ namespace BE_EXE201.Extensions.NewFolder
                 }
             }
 
-            var vnp_orderId = Convert.ToInt64(vnpay.GetResponseData("vnp_TxnRef"));
-            var vnp_TransactionId = Convert.ToInt64(vnpay.GetResponseData("vnp_TransactionNo"));
+            // Extract transaction details
+            var vnp_OrderInfo = vnpay.GetResponseData("vnp_OrderInfo");
+            var vnp_TransactionIdString = vnpay.GetResponseData("vnp_TransactionNo").ToString();
+            var vnp_AmountString = vnpay.GetResponseData("vnp_Amount"); // Extract amount from response
+
+            // Extract OrderId from vnp_OrderInfo
+            var vnp_orderIdString = vnp_OrderInfo?.Split(':').LastOrDefault()?.Trim(); // Assuming OrderId is after the last colon
+
+            // Convert them to long or int only when needed
+            long vnp_TransactionId = Convert.ToInt64(vnp_TransactionIdString);
+            long vnp_Amount = Convert.ToInt64(vnp_AmountString); // Convert amount to long
+
             var vnp_SecureHash = collections.FirstOrDefault(p => p.Key == "vnp_SecureHash").Value;
             var vnp_ResponseCode = vnpay.GetResponseData("vnp_ResponseCode");
-            var vnp_OrderInfo = vnpay.GetResponseData("vnp_OrderInfo");
 
+            // Check the response code for success
+            if (vnp_ResponseCode != "00")
+            {
+                // Handle unsuccessful payment, possibly perform a rollback here
+                return new VnPaymentResponseModel
+                {
+                    Success = false,
+                    Message = "Payment failed. Response code: " + vnp_ResponseCode
+                };
+            }
+
+            // Validate the secure hash
             bool checkSignature = vnpay.ValidateSignature(vnp_SecureHash, _config["VnPay:HashSecret"]);
             if (!checkSignature)
             {
                 return new VnPaymentResponseModel
                 {
-                    Success = false
+                    Success = false,
+                    Message = "Invalid signature."
                 };
             }
 
@@ -70,11 +125,16 @@ namespace BE_EXE201.Extensions.NewFolder
                 Success = true,
                 PaymentMethod = "VnPay",
                 OrderDescription = vnp_OrderInfo,
-                OrderId = vnp_orderId.ToString(),
-                TransactionId = vnp_TransactionId.ToString(),
+                OrderId = vnp_orderIdString, // Use the correctly extracted OrderId
+                TransactionId = vnp_TransactionIdString, // Keep it as string
+                Amount = vnp_Amount, // Include the amount in the response
                 Token = vnp_SecureHash,
                 VnPayResponseCode = vnp_ResponseCode
             };
         }
+
+
+
+
     }
 }
