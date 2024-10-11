@@ -45,7 +45,7 @@ namespace BE_EXE201.Services
                     OrderId =  orderId.ToString(), // Keep it as int
                     Amount = paymentRequest.Amount,
                     Status = "Pending",
-                    UpdatedDate = DateTime.Now,
+                    CreateDate = DateTime.Now,
                     TransactionId = transactionId.ToString() // Keep it as int
                 };
 
