@@ -84,7 +84,7 @@ public static class ServicesExtensions
         services.AddScoped<CloudService>();
         services.AddScoped<ImageService>();
         services.AddScoped<HomeService>();
-        services.AddScoped<DashboardServices>();
+        //services.AddScoped<DashboardServices>();
         services.AddScoped<PaymentService>();
 
         services.AddScoped<IVnPayService, VnPayService>();
