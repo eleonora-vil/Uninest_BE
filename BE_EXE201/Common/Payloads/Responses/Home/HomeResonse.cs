@@ -6,13 +6,13 @@ namespace BE_EXE201.Common.Payloads.Responses.Home
     public class HomeResonse
     {
         public int? HomeId { get; set; }
-
+        public int? UserId { get; set; }
         [Required]
         [MaxLength(100)]
         public string Name { get; set; }
 
-        public float? Price { get; set; }
-        public float? Size { get; set; }
+        public string? Price { get; set; }
+        public string? Size { get; set; }
 
         [MaxLength(255)]
         public string? Description { get; set; }
@@ -21,24 +21,13 @@ namespace BE_EXE201.Common.Payloads.Responses.Home
 
         public int? Bedrooms { get; set; }
 
-       // public string? HouseStatus { get; set; }
+        // Include full Location details
+        public LocationModel Location { get; set; } = new LocationModel();
 
-       //  public string? Status { get; set; }
-
-       // public DateTimeOffset? CreateDate { get; set; }
-
-       // public DateTimeOffset? ModifyDate { get; set; }
-
-       // public string? CreateBy { get; set; }
-
-       // public string? ModifyBy { get; set; }
-
-       // public string? ApproveStatus { get; set; }
-
-        // Foreign keys for Location and Utilities
-        public int? LocationId { get; set; }
-        public int? UtilitiesId { get; set; }
+        // Include full Utilities details
+        public UtilitiesModel Utilities { get; set; } = new UtilitiesModel();
 
         public ICollection<HomeImageModel> HomeImages { get; set; } = new List<HomeImageModel>();
     }
+
 }

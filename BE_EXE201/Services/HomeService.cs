@@ -38,42 +38,64 @@ namespace BE_EXE201.Services
             var homes = await _homeRepository.GetAll()
                 .Include(h => h.HomeImages)
                 .ThenInclude(hi => hi.Image)
+                .Include(h => h.Location) // Include Location
+                .Include(h => h.Utilities) // Include Utilities
                 .ToListAsync();
 
             // Map to HomeResponse
             var homeResponses = homes.Select(home => new HomeResonse
             {
                 HomeId = home.HomeId,
+                UserId = home.UserId,
                 Name = home.Name,
                 Price = home.Price,
                 Size = home.Size,
                 Description = home.Description,
                 Bathroom = home.Bathroom,
                 Bedrooms = home.Bedrooms,
-                //HouseStatus = home.HouseStatus,
-                //Status = home.Status,
-                //CreateDate = home.CreateDate,
-                //ModifyDate = home.ModifyDate,
-                //CreateBy = home.CreateBy,
-                //ModifyBy = home.ModifyBy,
-                //ApproveStatus = home.ApproveStatus,
-                LocationId = home.LocationId,
-                UtilitiesId = home.UtilitiesId,
+
+                // Map Location
+                Location = home.Location != null ? new LocationModel
+                {
+                    LocationId = home.Location.LocationId,
+                    Province = home.Location.Province,
+                    District = home.Location.District,
+                    Town = home.Location.Town,
+                    Street = home.Location.Street,
+                    HouseNumber = home.Location.HouseNumber
+                } : null,
+
+                // Map Utilities
+                Utilities = home.Utilities != null ? new UtilitiesModel
+                {
+                    UtilitiesId = home.Utilities.UtilitiesId,
+                    Elevator = home.Utilities.Elevator,
+                    SwimmingPool = home.Utilities.SwimmingPool,
+                    Gym = home.Utilities.Gym,
+                    TV = home.Utilities.TV,
+                    Refrigerator = home.Utilities.Refrigerator,
+                    Parking = home.Utilities.Parking,
+                    Balcony = home.Utilities.Balcony,
+                    AirConditioner = home.Utilities.AirConditioner
+                } : null,
+
+                // Map Home Images
                 HomeImages = home.HomeImages.Select(hi => new HomeImageModel
                 {
                     HomeImageId = hi.HomeImageId,
-                    HomeId = hi.HomeId, // Assuming this is the foreign key in HomeImage
+                    HomeId = hi.HomeId,
                     Image = new ImageModel
                     {
                         ImageId = hi.Image.ImageId,
                         ImageUrl = hi.Image.ImageUrl
                     },
-                    ImageDescription = hi.ImageDescription // Or any other property from HomeImage
+                    ImageDescription = hi.ImageDescription
                 }).ToList()
             }).ToList();
 
             return homeResponses;
         }
+
 
         // Get home by ID
         public async Task<HomeResonse> GetHomeById(int id)
@@ -81,6 +103,8 @@ namespace BE_EXE201.Services
             var home = await _homeRepository.GetAll()
                 .Include(h => h.HomeImages)
                 .ThenInclude(hi => hi.Image)
+                .Include(h => h.Location) // Include Location
+                .Include(h => h.Utilities) // Include Utilities
                 .FirstOrDefaultAsync(h => h.HomeId == id);
 
             if (home is not null)
@@ -89,38 +113,65 @@ namespace BE_EXE201.Services
                 var homeResponse = new HomeResonse
                 {
                     HomeId = home.HomeId,
+                    UserId = home.UserId,
                     Name = home.Name,
                     Price = home.Price,
                     Size = home.Size,
                     Description = home.Description,
                     Bathroom = home.Bathroom,
                     Bedrooms = home.Bedrooms,
-                    LocationId = home.LocationId,
-                    UtilitiesId = home.UtilitiesId,
+
+                    // Map Location
+                    Location = home.Location != null ? new LocationModel
+                    {
+                        LocationId = home.Location.LocationId,
+                        Province = home.Location.Province,
+                        District = home.Location.District,
+                        Town = home.Location.Town,
+                        Street = home.Location.Street,
+                        HouseNumber = home.Location.HouseNumber
+                    } : null,
+
+                    // Map Utilities
+                    Utilities = home.Utilities != null ? new UtilitiesModel
+                    {
+                        UtilitiesId = home.Utilities.UtilitiesId,
+                        Elevator = home.Utilities.Elevator,
+                        SwimmingPool = home.Utilities.SwimmingPool,
+                        Gym = home.Utilities.Gym,
+                        TV = home.Utilities.TV,
+                        Refrigerator = home.Utilities.Refrigerator,
+                        Parking = home.Utilities.Parking,
+                        Balcony = home.Utilities.Balcony,
+                        AirConditioner = home.Utilities.AirConditioner
+                    } : null,
+
+                    // Map Home Images
                     HomeImages = home.HomeImages.Select(hi => new HomeImageModel
                     {
                         HomeImageId = hi.HomeImageId,
-                        HomeId = hi.HomeId, // Assuming this is the foreign key in HomeImage
+                        HomeId = hi.HomeId,
                         Image = new ImageModel
                         {
                             ImageId = hi.Image.ImageId,
                             ImageUrl = hi.Image.ImageUrl
                         },
-                        ImageDescription = hi.ImageDescription // Or any other property from HomeImage
+                        ImageDescription = hi.ImageDescription
                     }).ToList()
                 };
 
                 return homeResponse;
             }
 
-            return null; // Or throw an exception if you prefer
+            return null; // Or throw an exception if preferred
         }
 
+
         // Create a new home
-        public async Task<HomeModel> CreateNewHome(HomeModel newHome, List<IFormFile> imageFiles)
+        public async Task<HomeModel> CreateNewHome(HomeModel newHome, List<IFormFile> imageFiles, int userId)
         {
             var homeEntity = _mapper.Map<Home>(newHome);
-
+            homeEntity.UserId = userId; // Assign the UserId to the home entity
             // Create new Location entity
             var locationEntity = new Location
             {
@@ -165,6 +216,7 @@ namespace BE_EXE201.Services
                 // Assign IDs to HomeEntity
                 homeEntity.LocationId = locationEntity.LocationId; // Get the ID of the newly created location
                 homeEntity.UtilitiesId = utilitiesEntity.UtilitiesId; // Get the ID of the newly created utilities
+                homeEntity.UserId = userId; // Assign the UserId to the home entity
 
                 // Upload images using CloudService
                 List<ImageUploadResult> uploadResults = await _cloudService.UploadImagesAsync(imageFiles);
@@ -228,8 +280,8 @@ namespace BE_EXE201.Services
                 {
                     // Update basic home info
                     if (!string.IsNullOrEmpty(req.Name)) homeEntity.Name = req.Name;
-                    if (req.Price.HasValue) homeEntity.Price = req.Price.Value;
-                    if (req.Size.HasValue) homeEntity.Size = req.Size.Value;
+                    if (!string.IsNullOrEmpty( req.Price)) homeEntity.Price = req.Price;
+                    if (!string.IsNullOrEmpty(req.Size)) homeEntity.Size = req.Size;
                     if (!string.IsNullOrEmpty(req.Description)) homeEntity.Description = req.Description;
                     if (req.Bathroom.HasValue) homeEntity.Bathroom = req.Bathroom.Value;
                     if (req.Bedrooms.HasValue) homeEntity.Bedrooms = req.Bedrooms.Value;

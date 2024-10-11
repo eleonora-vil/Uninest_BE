@@ -5,7 +5,7 @@ using Microsoft.EntityFrameworkCore.Migrations;
 
 namespace BE_EXE201.Migrations
 {
-    public partial class v4 : Migration
+    public partial class v1 : Migration
     {
         protected override void Up(MigrationBuilder migrationBuilder)
         {
@@ -111,13 +111,14 @@ namespace BE_EXE201.Migrations
                     HomeId = table.Column<int>(type: "int", nullable: false)
                         .Annotation("SqlServer:Identity", "1, 1"),
                     Name = table.Column<string>(type: "nvarchar(100)", maxLength: 100, nullable: false),
-                    Price = table.Column<float>(type: "real", nullable: true),
-                    Size = table.Column<float>(type: "real", nullable: true),
+                    Price = table.Column<string>(type: "nvarchar(max)", nullable: true),
+                    Size = table.Column<string>(type: "nvarchar(max)", nullable: true),
                     Description = table.Column<string>(type: "nvarchar(max)", nullable: true),
                     Bathroom = table.Column<int>(type: "int", nullable: true),
                     Bedrooms = table.Column<int>(type: "int", nullable: true),
                     LocationId = table.Column<int>(type: "int", nullable: true),
-                    UtilitiesId = table.Column<int>(type: "int", nullable: true)
+                    UtilitiesId = table.Column<int>(type: "int", nullable: true),
+                    UserId = table.Column<int>(type: "int", nullable: true)
                 },
                 constraints: table =>
                 {
@@ -127,6 +128,11 @@ namespace BE_EXE201.Migrations
                         column: x => x.LocationId,
                         principalTable: "Location",
                         principalColumn: "LocationId");
+                    table.ForeignKey(
+                        name: "FK_Home_User_UserId",
+                        column: x => x.UserId,
+                        principalTable: "User",
+                        principalColumn: "UserId");
                     table.ForeignKey(
                         name: "FK_Home_Utilities_UtilitiesId",
                         column: x => x.UtilitiesId,
@@ -145,7 +151,8 @@ namespace BE_EXE201.Migrations
                     Amount = table.Column<decimal>(type: "decimal(18,2)", nullable: false),
                     TransactionId = table.Column<string>(type: "nvarchar(max)", nullable: false),
                     Status = table.Column<string>(type: "nvarchar(max)", nullable: false),
-                    CreatedDate = table.Column<DateTime>(type: "datetime2", nullable: false)
+                    CreateDate = table.Column<DateTime>(type: "datetime2", nullable: false),
+                    UpdatedDate = table.Column<DateTime>(type: "datetime2", nullable: false)
                 },
                 constraints: table =>
                 {
@@ -242,6 +249,11 @@ namespace BE_EXE201.Migrations
                 column: "LocationId");
 
             migrationBuilder.CreateIndex(
+                name: "IX_Home_UserId",
+                table: "Home",
+                column: "UserId");
+
+            migrationBuilder.CreateIndex(
                 name: "IX_Home_UtilitiesId",
                 table: "Home",
                 column: "UtilitiesId");
@@ -300,19 +312,19 @@ namespace BE_EXE201.Migrations
                 name: "Image");
 
             migrationBuilder.DropTable(
-                name: "User");
-
-            migrationBuilder.DropTable(
                 name: "Home");
-
-            migrationBuilder.DropTable(
-                name: "UserRole");
 
             migrationBuilder.DropTable(
                 name: "Location");
 
             migrationBuilder.DropTable(
+                name: "User");
+
+            migrationBuilder.DropTable(
                 name: "Utilities");
+
+            migrationBuilder.DropTable(
+                name: "UserRole");
         }
     }
 }

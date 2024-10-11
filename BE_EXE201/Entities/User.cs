@@ -53,5 +53,6 @@ namespace BE_EXE201.Entities
         public string? AvatarUrl { get; set; }
 
         public decimal? Wallet { get; set; }
+        //public ICollection<Home> Homes { get; set; } = new List<Home>();
     }
 }

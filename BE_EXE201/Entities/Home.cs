@@ -15,8 +15,8 @@ namespace BE_EXE201.Entities
         [MaxLength(100)]
         public string Name { get; set; }
 
-        public float? Price { get; set; }
-        public float? Size { get; set; }
+        public string? Price { get; set; }
+        public string? Size { get; set; }
         public string? Description { get; set; }
         public int? Bathroom { get; set; }
         public int? Bedrooms { get; set; }
@@ -30,5 +30,9 @@ namespace BE_EXE201.Entities
 
         // One-to-Many with HomeImage
         public ICollection<HomeImage> HomeImages { get; set; } = new List<HomeImage>();
+        
+        //[ForeignKey("UserId")]
+        public int? UserId { get; set; }
+        public User User { get; set; }
     }
 }

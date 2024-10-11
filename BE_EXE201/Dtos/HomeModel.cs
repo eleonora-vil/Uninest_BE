@@ -11,6 +11,8 @@ namespace BE_EXE201.Dtos
         [Required]
         [MaxLength(100)]
         public string Name { get; set; }
+        
+        public int UserId { get; set; }
 
         public float? Price { get; set; }
         public float? Size { get; set; }
@@ -50,6 +52,6 @@ namespace BE_EXE201.Dtos
         public bool? Balcony { get; set; }
         public bool? AirConditioner { get; set; }
         // public ICollection<HomeImageModel> HomeImages { get; set; } = new List<HomeImageModel>();
-
+      
     }
 }

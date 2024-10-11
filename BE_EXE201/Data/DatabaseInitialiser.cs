@@ -74,7 +74,7 @@ namespace BE_EXE201.Data
                 UserName = "admin",
                 Password = SecurityUtil.Hash("123456"), // Adjust the password hashing as needed
                 FullName = "Admin User",
-                Email = "admin@example.com",
+                Email = "admin@gmail.com",
                 Gender = "Male",
                 Address = "123 Admin St, City, Country",
                 BirthDate = new DateTime(1985, 1, 1),
@@ -91,7 +91,7 @@ namespace BE_EXE201.Data
                 UserName = "owner",
                 Password = SecurityUtil.Hash("123456"),
                 FullName = "Owner User",
-                Email = "owner@example.com",
+                Email = "owner@gmail.com",
                 Gender = "Female",
                 Address = "456 Owner Ave, City, Country",
                 BirthDate = new DateTime(1990, 6, 15),
@@ -108,7 +108,7 @@ namespace BE_EXE201.Data
                 UserName = "tenant",
                 Password = SecurityUtil.Hash("123456"),
                 FullName = "Tenant User",
-                Email = "tenant@example.com",
+                Email = "tenant@gmail.com",
                 Gender = "Other",
                 Address = "789 Tenant Rd, City, Country",
                 BirthDate = new DateTime(1995, 9, 25),
@@ -124,6 +124,9 @@ namespace BE_EXE201.Data
             {
                 adminUser,ownerUser,tenantUser
             };
+            await _context.UserRoles.AddRangeAsync(userRoles);
+            await _context.Users.AddRangeAsync(users);
+            await _context.SaveChangesAsync();
             // List of locations
             List<Location> locations = new()
     {
@@ -332,8 +335,10 @@ namespace BE_EXE201.Data
         new Home
         {
             Name = "Căn hộ DV full đồ 1K1N 40m2 phố Nguyễn Khách Toàn",
-            Price = 65,
-            Description = "40",
+            UserId = ownerUser.UserId,
+            Price = "6.5 triệu",
+            Size = " 80 m2",
+            Description = "Tiện ích: có khoá cổng vân tay, giờ giấc tự do. co máy giặt chung NỘI THẤT: máy lạnh, kệ bếp, kệ chén, bàn bếp",
             Bathroom = 1,
             Bedrooms = 1,
             Location = locations[0],  // Reference to location
@@ -342,8 +347,10 @@ namespace BE_EXE201.Data
         new Home
         {
             Name = "Căn hộ 2 phòng ngủ 80m2 tại Quận 1",
-            Price = 120,
-            Description = "80",
+           UserId = ownerUser.UserId,
+            Price = "4,2 triệu",
+            Size = "80 m2",
+            Description = "Tiện ích: có khoá cổng vân tay, giờ giấc tự do. co máy giặt chung NỘI THẤT: máy lạnh, kệ bếp, kệ chén, bàn bếp",
             Bathroom = 2,
             Bedrooms = 2,
             Location = locations[1],
@@ -352,8 +359,9 @@ namespace BE_EXE201.Data
         new Home // New homeId 3
         {
             Name = "CHO THUÊ NHÀ NGUYÊN CĂN 4 X 20 M -KC 3 LẦU -AN PHÚ -27 triệu",
-            Price = 20,
-            Size = 80,
+            UserId = ownerUser.UserId,
+            Price = "20 triệu",
+            Size = "80 m2" ,
             Description = "- Kết cấu: trệt + 2 lầu + sân thượng. - 5 phòng làm việc, 5WC, phòng trống suốt.. 4 điều hòa. - đường rộng 18m Vỉa hè rộng. Vỉa hè tận dụng để xe thoải mái.  Con đường sầm uất Quận 2. Đường rộng 20 m.",
             Bathroom = 2,
             Bedrooms = 2,
@@ -363,8 +371,9 @@ namespace BE_EXE201.Data
         new Home // New homeId 4
         {
             Name = "PHÒNG TRỌ ĐIỀU HOÀ FULL NỘI THẤT",
-            Price = 15,
-            Size = 20,
+           UserId = ownerUser.UserId,
+            Price = "1,5 triệu" , 
+            Size = "20 m2" ,
             Description = "- Kết cấu: trệt + 2 lầu + sân thượng. - 5 phòng làm việc, 5WC, phòng trống suốt.. 4 điều hòa. - đường rộng 18m Vỉa hè rộng. Vỉa hè tận dụng để xe thoải mái.  Con đường sầm uất Quận 2. Đường rộng 20 m.",
             Bathroom = 1,
             Bedrooms = 1,
@@ -374,8 +383,9 @@ namespace BE_EXE201.Data
         new Home
         {
             Name = "Phòng trọ giá rẻ quận 2 đẹp như khách sạn chỉ 3,9 triệu",
-            Price = 39,
-            Size = 30,
+           UserId = ownerUser.UserId,
+            Price = "3,9 triệu",
+            Size = "30 m2 ",
             Description = "- Gần cảng Cát Lái chợ xóm mới gần trường UMT bán kính 500m. - Khu dân cư đông đúc. - Giờ giấc tự do - Camera và khoá từ - Q2 siêu thị Emart 3km. - chợ dân sinh cách 300m - siêu thị 3 cái khu ăn uống, quán ăn, quán nhậu",
             Bathroom = 1,
             Bedrooms = 1,
@@ -385,8 +395,9 @@ namespace BE_EXE201.Data
          new Home // New homeId 6
         {
             Name = "Phòng Thật 100%, Ban Công mát, Tại KđT Đông Tăng Long,Gần Vinhome,FPT ",
-            Price = 37,
-            Size = 35,
+          UserId = ownerUser.UserId,
+            Price = "3,7 triệu",
+            Size = "35 m2",
             Description = "Ban công thoáng mát + Gần khu Công Nghệ Cao, các trường Đại Học. + khép kín tiện lợi: wc, bếp, đèn điện, quạt trần, cửa sổ ánh sáng, thoáng mát + Miễn phí: quản lý, bảo trì + An ninh, văn minh + Đồng hồ điện nước riêng + Điện 3.8k/số, nước 20k/số",
             Bathroom = 1,
             Bedrooms = 1,
@@ -396,8 +407,9 @@ namespace BE_EXE201.Data
           new Home // New homeId 7
         {
             Name = "Ở ĐƯỢC 3-4 BẠN GẦN TRƯỜNG NTTU VÀ ĐẠI HỌC UFM ,NGUYỄN TẤT THÀNH QUẬN 4",
-            Price = 49,
-            Size = 40,
+            UserId = ownerUser.UserId,
+            Price = "4,9 triệu",
+            Size = "40 m2" ,
             Description = "• Gần Trục đường lớn , Tôn Thất Huyết , Nguyễn Tất Thành , Tiện Qua Quận 1 và Trung Tâm Sài Gòn  • Full nội thất • Diện tích rộng • Thang máy tiện nghi • Giờ giấc tự do • Ra vào vân tay • Hầm xe rộng\"",
             Bathroom = 1,
             Bedrooms = 1,
@@ -407,8 +419,9 @@ namespace BE_EXE201.Data
            new Home // New homeId 8
         {
             Name = "TRỌ GÁC RỘNG 30M2 MỚI XÂY Ở ĐƯỜNG SỐ 30",
-            Price = 33,
-            Size = 30,
+            UserId = ownerUser.UserId,
+            Price = "3,3 triệu" ,
+            Size = "30 m2" ,
             Description = "Tiện ích: có khoá cổng vân tay, giờ giấc tự do. co máy giặt chung NỘI THẤT: máy lạnh, kệ bếp, kệ chén, bàn bếp CHI PHÍ: điện 3k số nước 100 người dịch vụ 150K phòng",
             Bathroom = 1,
             Bedrooms = 1,
@@ -418,8 +431,9 @@ namespace BE_EXE201.Data
             new Home// New homeId 9
         {
             Name = "PHÒNG TRỌ MỚI XÂY Ở DƯỜNG SỐ 21 ( THUỘC NHÁNH QUANG TRUNG)",
-            Price = 3,
-            Size = 15,
+            UserId = ownerUser.UserId,
+            Price = "3 triệu",
+            Size = "15 m2",
             Description = "Tiện ích toà nhà: có thang máy, camera an ninh, máy giặt chung, giờ giấc tự do khoá cổng vân tay, ko chung chủ ko giới hạn người ở nội thất: có máy lạnh mới. kệ bếp, bồn rửa mặt... chi phí: + điện 3k5/số + nước 100k/ng + dịch vụ 150k/ng\"",
             Bathroom = 1,
             Bedrooms = 1,
@@ -430,8 +444,9 @@ namespace BE_EXE201.Data
         {
             
             Name = "CHDV Lê Quang Định, Bình Thạnh, giáp Phú Nhuận, Q1",
-            Price = 7,
-            Size = 25,
+            UserId = ownerUser.UserId,
+            Price = "7 triệu",
+            Size = "25 m2" ,
             Description = "• Gác cao k đụng đầu • Hầm xe thang máy tiện nghi • Ra vào vân tay giờ giấc tự do • Hầm xe rộng , bảo vệ 24/7 • Đạt chuẩn PCCC",
             Bathroom = 1,
             Bedrooms = 1,
@@ -534,9 +549,9 @@ namespace BE_EXE201.Data
 
             // Save all changes to the database
 
-            await _context.UserRoles.AddRangeAsync(userRoles);
+           // await _context.UserRoles.AddRangeAsync(userRoles);
 
-            await _context.Users.AddRangeAsync(users);
+            //await _context.Users.AddRangeAsync(users);
 
             await _context.Locations.AddRangeAsync(locations);
 

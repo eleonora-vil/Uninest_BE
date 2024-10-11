@@ -3,8 +3,8 @@
     public class UpdateHomeRequest
     {
         public string? Name { get; set; }
-        public float? Price { get; set; }
-        public float? Size { get; set; }
+        public string? Price { get; set; }
+        public string? Size { get; set; }
         public string? Description { get; set; }
         public int? Bathroom { get; set; }
         public int? Bedrooms { get; set; }

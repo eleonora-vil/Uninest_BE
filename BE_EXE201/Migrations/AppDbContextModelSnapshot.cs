@@ -47,11 +47,14 @@ namespace BE_EXE201.Migrations
                         .HasMaxLength(100)
                         .HasColumnType("nvarchar(100)");
 
-                    b.Property<float?>("Price")
-                        .HasColumnType("real");
+                    b.Property<string>("Price")
+                        .HasColumnType("nvarchar(max)");
 
-                    b.Property<float?>("Size")
-                        .HasColumnType("real");
+                    b.Property<string>("Size")
+                        .HasColumnType("nvarchar(max)");
+
+                    b.Property<int?>("UserId")
+                        .HasColumnType("int");
 
                     b.Property<int?>("UtilitiesId")
                         .HasColumnType("int");
@@ -59,6 +62,8 @@ namespace BE_EXE201.Migrations
                     b.HasKey("HomeId");
 
                     b.HasIndex("LocationId");
+
+                    b.HasIndex("UserId");
 
                     b.HasIndex("UtilitiesId");
 
@@ -379,11 +384,17 @@ namespace BE_EXE201.Migrations
                         .WithMany()
                         .HasForeignKey("LocationId");
 
+                    b.HasOne("BE_EXE201.Entities.User", "User")
+                        .WithMany()
+                        .HasForeignKey("UserId");
+
                     b.HasOne("BE_EXE201.Entities.Utilities", "Utilities")
                         .WithMany()
                         .HasForeignKey("UtilitiesId");
 
                     b.Navigation("Location");
+
+                    b.Navigation("User");
 
                     b.Navigation("Utilities");
                 });

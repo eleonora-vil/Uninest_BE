@@ -8,8 +8,8 @@ namespace BE_EXE201.Entities
         {
         }
         #region Dbset
-        public DbSet<User> Users { get; set; }
         public DbSet<UserRole> UserRoles { get; set; }
+        public DbSet<User> Users { get; set; }
         public DbSet<Image> Images { get; set; }
         public DbSet<Location> Locations { get; set; }
         public DbSet<Utilities> Utilities { get; set; }
@@ -23,8 +23,12 @@ namespace BE_EXE201.Entities
         #endregion
         protected override void OnModelCreating(ModelBuilder modelBuilder)
         {
-            base.OnModelCreating(modelBuilder);
-            // Add custom configuration here
+            /*base.OnModelCreating(modelBuilder);
+            modelBuilder.Entity<Home>()
+            .HasOne(h => h.User)
+            .WithMany() // Assuming User has many Homes
+            .HasForeignKey(h => h.UserId)
+            .OnDelete(DeleteBehavior.NoAction); // No cascading delete*/
         }
     }
 }

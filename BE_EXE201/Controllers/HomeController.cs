@@ -1,6 +1,7 @@
 ﻿using BE_EXE201.Dtos;
 using BE_EXE201.Services;
 using Microsoft.AspNetCore.Mvc;
+using System.Security.Claims;
 
 namespace BE_EXE201.Controllers
 {
@@ -21,8 +22,21 @@ namespace BE_EXE201.Controllers
         {
             try
             {
+                // Assuming you have user authentication and can get the user ID from claims
+                var userIdClaim = User.FindFirst(ClaimTypes.NameIdentifier); // or ClaimTypes.Email or whatever you use
+                if (userIdClaim == null)
+                {
+                    return Unauthorized("User not authenticated."); // Return 401 Unauthorized if user not found
+                }
+
+                // Parse the user ID (assumed to be an integer here)
+                if (!int.TryParse(userIdClaim.Value, out var userId))
+                {
+                    return BadRequest("Invalid user ID."); // Return 400 Bad Request if user ID is not valid
+                }
+
                 // Call the service to create a new home with images
-                var createdHome = await _homeService.CreateNewHome(homeModel, images);
+                var createdHome = await _homeService.CreateNewHome(homeModel, images, userId);
 
                 if (createdHome != null)
                 {
@@ -38,6 +52,7 @@ namespace BE_EXE201.Controllers
                 return StatusCode(500, $"Internal server error: {ex.Message}"); // Return 500 Internal Server Error
             }
         }
+
 
         // You might also want to implement additional endpoints for CRUD operations.
         // For example:
