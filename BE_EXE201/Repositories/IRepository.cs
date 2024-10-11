@@ -15,6 +15,7 @@ public interface IRepository<TEntity, in TKey>
     Task<decimal> SumAsync(Expression<Func<TEntity, bool>> predicate, Expression<Func<TEntity, decimal>> selector);
     Task<IEnumerable<TEntity>> GetLastSevenDaysTransactionsAsync(Expression<Func<TEntity, bool>> predicate);
     Task<IEnumerable<TEntity>> GetRecentUsersAsync(int count);
+    Task<IEnumerable<TEntity>> GetRecentTransactionsAsync(int count);
 
 
 }
