@@ -19,6 +19,15 @@ public static class SecurityUtil
 
         return stringBuilder.ToString();
     }
+    public static bool VerifyHash(string input, string hashedInput)
+    {
+        // Hash the input
+        var hashOfInput = Hash(input);
+
+        // Compare the computed hash with the stored hash
+        return StringComparer.OrdinalIgnoreCase.Compare(hashOfInput, hashedInput) == 0;
+    }
+
     public static string GenerateRandomPassword()
     {
         Random rand = new Random();
