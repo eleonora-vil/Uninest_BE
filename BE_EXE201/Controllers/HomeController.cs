@@ -1,5 +1,6 @@
 ﻿using BE_EXE201.Dtos;
 using BE_EXE201.Services;
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using System.Security.Claims;
 
@@ -100,6 +101,22 @@ namespace BE_EXE201.Controllers
                 {
                     return NotFound("Home not found."); // Return 404 Not Found
                 }
+            }
+            catch (Exception ex)
+            {
+                return StatusCode(500, $"Internal server error: {ex.Message}");
+            }
+        }
+
+        // Endpoint to get homes by user ID
+        [HttpGet("GetHomesByUserId")]
+        [Authorize] 
+        public async Task<IActionResult> GetHomesByUserId(int userId)
+        {
+            try
+            {
+                var homes = await _homeService.GetHomesByUserId(userId);
+                return Ok(homes);
             }
             catch (Exception ex)
             {

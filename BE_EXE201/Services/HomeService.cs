@@ -387,6 +387,72 @@ namespace BE_EXE201.Services
             }
             return false;
         }
+
+
+        // Get homes by user ID
+        public async Task<IEnumerable<HomeResonse>> GetHomesByUserId(int userId)
+        {
+            var homes = await _homeRepository.GetAll()
+                .Where(h => h.UserId == userId)
+                .Include(h => h.HomeImages)
+                .ThenInclude(hi => hi.Image)
+                .Include(h => h.Location)
+                .Include(h => h.Utilities)
+                .ToListAsync();
+
+            // Map to HomeResponse
+            var homeResponses = homes.Select(home => new HomeResonse
+            {
+                HomeId = home.HomeId,
+                UserId = home.UserId,
+                Name = home.Name,
+                Price = home.Price,
+                Size = home.Size,
+                Description = home.Description,
+                Bathroom = home.Bathroom,
+                Bedrooms = home.Bedrooms,
+
+                // Map Location
+                Location = home.Location != null ? new LocationModel
+                {
+                    LocationId = home.Location.LocationId,
+                    Province = home.Location.Province,
+                    District = home.Location.District,
+                    Town = home.Location.Town,
+                    Street = home.Location.Street,
+                    HouseNumber = home.Location.HouseNumber
+                } : null,
+
+                // Map Utilities
+                Utilities = home.Utilities != null ? new UtilitiesModel
+                {
+                    UtilitiesId = home.Utilities.UtilitiesId,
+                    Elevator = home.Utilities.Elevator,
+                    SwimmingPool = home.Utilities.SwimmingPool,
+                    Gym = home.Utilities.Gym,
+                    TV = home.Utilities.TV,
+                    Refrigerator = home.Utilities.Refrigerator,
+                    Parking = home.Utilities.Parking,
+                    Balcony = home.Utilities.Balcony,
+                    AirConditioner = home.Utilities.AirConditioner
+                } : null,
+
+                // Map Home Images
+                HomeImages = home.HomeImages.Select(hi => new HomeImageModel
+                {
+                    HomeImageId = hi.HomeImageId,
+                    HomeId = hi.HomeId,
+                    Image = new ImageModel
+                    {
+                        ImageId = hi.Image.ImageId,
+                        ImageUrl = hi.Image.ImageUrl
+                    },
+                    ImageDescription = hi.ImageDescription
+                }).ToList()
+            }).ToList();
+
+            return homeResponses;
+        }
     }
 
 }
