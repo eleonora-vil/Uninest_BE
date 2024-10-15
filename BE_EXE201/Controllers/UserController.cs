@@ -11,6 +11,9 @@ using BE_EXE201.Helpers;
 using BE_EXE201.Services;
 using BE_EXE201.Validation;
 using BE_EXE201.Extensions.NewFolder;
+using System.Net.Mail;
+using System.Security.Claims;
+using BE_EXE201.Dtos.User;
 
 namespace BE_EXE201.Controllers
 {
@@ -33,7 +36,7 @@ namespace BE_EXE201.Controllers
             _vnPayService = vnPayService;
         }
         [HttpGet("GetAll")]
-      // [Authorize(Roles = "Admin")]
+        // [Authorize(Roles = "Admin")]
         public async Task<IActionResult> GetAllUsers()
         {
             var result = await _userService.GetAllUsers();
@@ -45,7 +48,7 @@ namespace BE_EXE201.Controllers
 
         [HttpPost]
         [Route("Create")]
-       // [Authorize(Roles = "Super Admin,Admin")]
+        // [Authorize(Roles = "Super Admin,Admin")]
         public async Task<IActionResult> CreateNewUser([FromBody] CreateNewUserRequest req)
         {
             var user = req.ToUserModel();
@@ -191,6 +194,151 @@ namespace BE_EXE201.Controllers
             }));
         }
 
+
+        [HttpGet("by-email")]
+        public async Task<IActionResult> GetUserByEmail([FromQuery] string email)
+        {
+            // Validate email
+            if (string.IsNullOrWhiteSpace(email))
+            {
+                return BadRequest("Email is required.");
+            }
+
+            // Validate email format
+            try
+            {
+                var addr = new MailAddress(email);
+            }
+            catch
+            {
+                return BadRequest("Invalid email format.");
+            }
+
+            try
+            {
+                var user = await _userService.GetUserByEmail(email);
+                if (user == null)
+                {
+                    return NotFound($"User with email {email} not found.");
+                }
+
+                return Ok(new
+                {
+                    Success = true,
+                    Message = "User retrieved successfully.",
+                    Data = user
+                });
+            }
+            catch (Exception ex)
+            {
+                // Log the exception
+                return StatusCode(500, new
+                {
+                    Success = false,
+                    Message = "An error occurred while processing your request.",
+                    Error = ex.Message
+                });
+            }
+        }
+
+        [HttpPut("update-profile")]
+        [Authorize]
+        public async Task<IActionResult> UpdateProfile([FromBody] UpdateUserRequest req)
+        {
+            try
+            {
+                var userEmail = User.FindFirst(ClaimTypes.Email)?.Value;
+                if (string.IsNullOrEmpty(userEmail))
+                {
+                    return Unauthorized("User not authenticated");
+                }
+
+                var existingUser = await _userService.GetUserByEmail(userEmail);
+                if (existingUser == null)
+                {
+                    return NotFound("User not found");
+                }
+
+                var updatedUser = await _userService.UpdateUser(existingUser, req);
+
+                if (updatedUser != null)
+                {
+                    return Ok(ApiResult<UpdateUserRespone>.Succeed(new UpdateUserRespone
+                    {
+                        User = updatedUser
+                    }));
+                }
+                else
+                {
+                    return BadRequest("Failed to update user");
+                }
+            }
+            catch (Exception ex)
+            {
+                return StatusCode(500, "Internal server error: " + ex.Message);
+            }
+        }
+
+        [HttpPut("change-password")]
+        [Authorize]
+        public async Task<IActionResult> ChangePassword([FromBody] ChangePasswordRequest req)
+        {
+            try
+            {
+                var userEmail = User.FindFirst(ClaimTypes.Email)?.Value;
+                if (string.IsNullOrEmpty(userEmail))
+                {
+                    return Unauthorized("User not authenticated");
+                }
+
+                var existingUser = await _userService.GetUserByEmail(userEmail);
+                if (existingUser == null)
+                {
+                    return NotFound("User not found");
+                }
+
+                var result = await _userService.ChangePassword(existingUser, req.CurrentPassword, req.NewPassword);
+
+                if (result)
+                {
+                    return Ok(ApiResult<string>.Succeed("Password changed successfully"));
+                }
+                else
+                {
+                    return BadRequest("Failed to change password");
+                }
+            }
+            catch (Exception ex)
+            {
+                return StatusCode(500, "Internal server error: " + ex.Message);
+            }
+        }
+
+        [HttpGet("profile")]
+        [Authorize]
+        public async Task<IActionResult> GetUserProfile()
+        {
+            try
+            {
+                var userEmail = User.FindFirst(ClaimTypes.Email)?.Value;
+                if (string.IsNullOrEmpty(userEmail))
+                {
+                    return Unauthorized("User not authenticated");
+                }
+
+                var user = await _userService.GetUserByEmail(userEmail);
+                if (user == null)
+                {
+                    return NotFound("User not found");
+                }
+
+                return Ok(ApiResult<UserModel>.Succeed(user));
+            }
+            catch (Exception ex)
+            {
+                return StatusCode(500, "Internal server error: " + ex.Message);
+            }
+        }
 
     }
 }
