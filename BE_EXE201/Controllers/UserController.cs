@@ -340,5 +340,34 @@ namespace BE_EXE201.Controllers
             }
         }
 
+        [Authorize]
+        [HttpPost("register-membership")]
+        public async Task<IActionResult> RegisterMembership([FromBody] MembershipRegistrationDto registrationDto)
+        {
+            var userIdClaim = User.FindFirst(ClaimTypes.NameIdentifier);
+            if (userIdClaim == null || !int.TryParse(userIdClaim.Value, out int userId))
+            {
+                return BadRequest(ApiResult<object>.Fail("User ID not found or invalid"));
+            }
+
+            try
+            {
+                var result = await _userService.RegisterMembershipAsync(userId, registrationDto.AutoRenew);
+                return Ok(ApiResult<User>.Succeed(result));
+            }
+            catch (ArgumentException ex)
+            {
+                return NotFound(ApiResult<object>.Fail(ex.Message));
+            }
+            catch (InvalidOperationException ex)
+            {
+                return BadRequest(ApiResult<object>.Fail(ex.Message));
+            }
+            catch (Exception)
+            {
+                return StatusCode(500, ApiResult<object>.Fail("An error occurred while processing your request"));
+            }
+        }
+
     }
 }

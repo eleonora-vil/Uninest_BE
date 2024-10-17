@@ -10,6 +10,7 @@ using BE_EXE201.Repositories;
 using Microsoft.IdentityModel.Tokens;
 using System.IdentityModel.Tokens.Jwt;
 using BE_EXE201.Dtos.Payment;
+using BE_EXE201.Dtos.User;
 
 namespace BE_EXE201.Services
 {
@@ -20,19 +21,25 @@ namespace BE_EXE201.Services
         private readonly IRepository<UserRole, int> _userRoleRepository;
         private readonly EmailService _emailService;
         private readonly IRepository<PaymentTransaction, int> _paymentTransactionRepository;
+        private const decimal MembershipFee = 200000;
+        private readonly AppDbContext _dbContext;
+
+
 
         public UserService(
             IRepository<User, int> userRepository,
             IMapper mapper,
             IRepository<UserRole, int> userRoleRepository,
             EmailService emailService,
-            IRepository<PaymentTransaction, int> paymentTransactionRepository)
+            IRepository<PaymentTransaction, int> paymentTransactionRepository,
+            AppDbContext dbContext)
         {
             _userRepository = userRepository;
             _mapper = mapper;
             _userRoleRepository = userRoleRepository;
             _emailService = emailService;
             _paymentTransactionRepository = paymentTransactionRepository;
+            _dbContext = dbContext;
         }
 
         public async Task<IEnumerable<UserModel>> GetAllUsers()
@@ -385,6 +392,49 @@ namespace BE_EXE201.Services
             return _mapper.Map<UserModel>(user);
         }
 
+        public async Task<User> RegisterMembershipAsync(int userId, bool autoRenew)
+        {
+            using var transaction = await _dbContext.Database.BeginTransactionAsync();
+
+            try
+            {
+                var user = await _userRepository.GetByIdAsync(userId);
+                if (user == null)
+                {
+                    throw new ArgumentException("User not found");
+                }
+
+                if (user.IsActiveMember)
+                {
+                    throw new InvalidOperationException("User is already an active member");
+                }
+
+                if (user.Wallet < MembershipFee)
+                {
+                    throw new InvalidOperationException("Insufficient funds in wallet");
+                }
+
+                user.IsMember = true;
+                user.MembershipStartDate = DateTime.UtcNow;
+                user.MembershipEndDate = DateTime.UtcNow.AddMonths(3);
+                user.AutoRenewMembership = autoRenew; // You can make this configurable if needed
+                user.Wallet -= MembershipFee;
+
+                _userRepository.Update(user);
+                await _userRepository.Commit();
+
+                await transaction.CommitAsync();
+
+                return user;
+            }
+            catch
+            {
+                await transaction.RollbackAsync();
+                throw;
+            }
+        }
     }
 
 }
+
+

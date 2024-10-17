@@ -98,6 +98,7 @@ public class AuthController : ControllerBase
         var res = new LoginResponse
         {
             AccessToken = handler.WriteToken(loginResult.Token),
+            UserId = loginResult.UserId  // Use the UserId from loginResult
         };
 
         return Ok(ApiResult<LoginResponse>.Succeed(res));

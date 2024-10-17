@@ -7,5 +7,5 @@ public class LoginResult
     public bool Authenticated { get; set; }
     public SecurityToken? Token { get; set; }
     public string? Message { get; set; }
-
+    public int UserId { get; set; }
 }

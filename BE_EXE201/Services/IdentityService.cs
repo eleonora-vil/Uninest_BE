@@ -53,7 +53,7 @@ public class IdentityService
         });
 
         var res = await _userRepository.Commit();
-     
+
         var mailData = new MailData()
         {
             EmailToId = userAdd.Email,
@@ -125,7 +125,8 @@ public class IdentityService
             {
                 Authenticated = false,
                 Token = null,
-                Message = "Invalid email."
+                Message = "Invalid email.",
+                UserId = 0
             };
         }
 
@@ -136,26 +137,29 @@ public class IdentityService
             {
                 Authenticated = false,
                 Token = null,
-                Message = "Invalid password."
+                Message = "Invalid password.",
+                UserId = 0
             };
         }
         if (user.Status != "Active")
         {
-         
+
             return new LoginResult
             {
                 Authenticated = false,
                 Token = null,
-                Message = "Please verify your email. An OTP has been sent to your email."
+                Message = "Please verify your email. An OTP has been sent to your email.",
+                UserId = 0
             };
         }
 
-     
+
         return new LoginResult
         {
             Authenticated = true,
-            Token = CreateJwtToken(user), 
-            Message = "Login successful."
+            Token = CreateJwtToken(user),
+            Message = "Login successful.",
+            UserId = user.UserId
         };
     }
 

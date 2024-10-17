@@ -53,6 +53,17 @@ namespace BE_EXE201.Entities
         public string? AvatarUrl { get; set; }
 
         public decimal? Wallet { get; set; }
+
+        public bool? IsMember { get; set; }
+
+        public DateTime? MembershipStartDate { get; set; }
+
+        public DateTime? MembershipEndDate { get; set; }
+
+        public bool? AutoRenewMembership { get; set; }
+
+        [NotMapped]
+        public bool IsActiveMember => IsMember == true && MembershipEndDate >= DateTime.Now;
         //public ICollection<Home> Homes { get; set; } = new List<Home>();
     }
 }
