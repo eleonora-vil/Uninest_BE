@@ -78,42 +78,24 @@ namespace BE_EXE201.Controllers
                     body.returnUrl,
                     buyerName
                     );
-                using (var transaction = await _dbContext.Database.BeginTransactionAsync())
+
+                CreatePaymentResult createPayment = await _payOS.createPaymentLink(paymentData);
+
+                // Prepare response with current user info
+                var currentUserInfo = new
                 {
-                    try
-                    {
-                        CreatePaymentResult createPayment = await _payOS.createPaymentLink(paymentData);
+                    user.UserId,
+                    user.FullName,
+                    user.Email,
+                    user.PhoneNumber,
+                    user.Wallet
+                };
 
-                        // Update user's wallet
-                        user.Wallet = (user.Wallet ?? 0) + body.price;
-                        _dbContext.Entry(user).Property(u => u.Wallet).IsModified = true;
-
-                        await _dbContext.SaveChangesAsync();
-
-                        await transaction.CommitAsync();
-
-                        // Prepare response with updated user info
-                        var updatedUserInfo = new
-                        {
-                            user.UserId,
-                            user.FullName,
-                            user.Email,
-                            user.PhoneNumber,
-                            user.Wallet
-                        };
-
-                        return Ok(new Response(0, "success", new
-                        {
-                            paymentInfo = createPayment,
-                            userInfo = updatedUserInfo
-                        }));
-                    }
-                    catch (Exception ex)
-                    {
-                        await transaction.RollbackAsync();
-                        throw;
-                    }
-                }
+                return Ok(new Response(0, "success", new
+                {
+                    paymentInfo = createPayment,
+                    userInfo = currentUserInfo
+                }));
             }
             catch (System.Exception exception)
             {
@@ -122,12 +104,13 @@ namespace BE_EXE201.Controllers
             }
         }
 
-        [HttpGet("getPayOSOrder/{orderId}")]
-        public async Task<IActionResult> GetOrder([FromRoute] int orderId)
+
+        [HttpGet("getPayOSOrder/{orderCode}")]
+        public async Task<IActionResult> GetOrder([FromRoute] int orderCode)
         {
             try
             {
-                PaymentLinkInformation paymentLinkInformation = await _payOS.getPaymentLinkInformation(orderId);
+                PaymentLinkInformation paymentLinkInformation = await _payOS.getPaymentLinkInformation(orderCode);
                 return Ok(new Response(0, "Ok", paymentLinkInformation));
             }
             catch (System.Exception exception)
@@ -138,12 +121,12 @@ namespace BE_EXE201.Controllers
             }
 
         }
-        [HttpPut("cancelOrder/{orderId}")]
-        public async Task<IActionResult> CancelOrder([FromRoute] int orderId, string reason)
+        [HttpPut("cancelOrder/{orderCode}")]
+        public async Task<IActionResult> CancelOrder([FromRoute] int orderCode, string reason)
         {
             try
             {
-                PaymentLinkInformation paymentLinkInformation = await _payOS.cancelPaymentLink(orderId, reason);
+                PaymentLinkInformation paymentLinkInformation = await _payOS.cancelPaymentLink(orderCode, reason);
                 return Ok(new Response(0, "Ok", paymentLinkInformation));
             }
             catch (System.Exception exception)
@@ -189,108 +172,76 @@ namespace BE_EXE201.Controllers
                 return Ok(new Response(-1, "fail", null));
             }
         }
-        //[HttpPost("/create-payment-link")]
-        //public async Task<IActionResult> Checkout()
-        //{
-        //    try
-        //    {
-        //        int orderCode = int.Parse(DateTimeOffset.Now.ToString("ffffff"));
-        //        ItemData item = new ItemData("Mì tôm hảo hảo ly", 1, 1000);
-        //        List<ItemData> items = new List<ItemData>();
-        //        items.Add(item);
-        //        PaymentData paymentData = new PaymentData(orderCode, 1000, "Thanh toan don hang", items, "https://localhost:3002/cancel", "https://localhost:3002/success");
 
-        //        CreatePaymentResult createPayment = await _payOS.createPaymentLink(paymentData);
+        [HttpPost("CheckOrderAndUpdateWallet")]
+        public async Task<IActionResult> CheckOrderAndUpdateWallet([FromBody] int orderCode)
+        {
+            try
+            {
+                // Get the current user's email from the JWT token
+                var userEmail = _httpContextAccessor.HttpContext.User.FindFirstValue(ClaimTypes.Email);
+                if (string.IsNullOrEmpty(userEmail))
+                {
+                    return Unauthorized("User not authenticated");
+                }
 
-        //        return Redirect(createPayment.checkoutUrl);
-        //    }
-        //    catch (System.Exception exception)
-        //    {
-        //        Console.WriteLine(exception);
-        //        return Redirect("https://localhost:3002/");
-        //    }
-        //}
+                // Find the user in the database
+                var user = await _dbContext.Users.FirstOrDefaultAsync(u => u.Email == userEmail);
+                if (user == null)
+                {
+                    return NotFound("User not found");
+                }
 
+                PaymentLinkInformation paymentLinkInformation = await _payOS.getPaymentLinkInformation(orderCode);
+
+                if (paymentLinkInformation.status == "PAID")
+                {
+                    using (var transaction = await _dbContext.Database.BeginTransactionAsync())
+                    {
+                        try
+                        {
+                            // Update user's wallet
+                            user.Wallet = (user.Wallet ?? 0) + paymentLinkInformation.amountPaid;
+                            _dbContext.Entry(user).Property(u => u.Wallet).IsModified = true;
+
+                            await _dbContext.SaveChangesAsync();
+
+                            await transaction.CommitAsync();
+
+                            // Prepare response with updated user info
+                            var updatedUserInfo = new
+                            {
+                                user.UserId,
+                                user.FullName,
+                                user.Email,
+                                user.PhoneNumber,
+                                user.Wallet
+                            };
+
+                            return Ok(new Response(0, "Wallet updated successfully", new
+                            {
+                                paymentInfo = paymentLinkInformation,
+                                userInfo = updatedUserInfo
+                            }));
+                        }
+                        catch (Exception ex)
+                        {
+                            await transaction.RollbackAsync();
+                            throw;
+                        }
+                    }
+                }
+                else
+                {
+                    return Ok(new Response(0, "Payment not completed yet", new { paymentInfo = paymentLinkInformation }));
+                }
+            }
+            catch (System.Exception exception)
+            {
+                Console.WriteLine(exception);
+                return Ok(new Response(-1, "fail", null));
+            }
+        }
     }
 }
-
-// 2. VNPay Callback to confirm transaction
-/* [HttpGet("PaymentCallback")]
- public async Task<IActionResult> PaymentCallback([FromQuery] IQueryCollection collections)
- {
-     try
-     {
-         // Execute the payment and validate the signature
-         var paymentResponse = _vnPayService.PaymentExecute(collections);
-
-         if (paymentResponse.Success)
-         {
-             // Log success details for debugging
-             // You can log paymentResponse details here
-
-             // Retrieve user based on the order ID from the response
-             var user = await _userService.GetUserByOrderId(paymentResponse.OrderId);
-             if (user != null)
-             {
-                 // Update the user's wallet based on the successful payment
-                 await _userService.UpdateUserWallet(user, paymentResponse);
-                 return Ok(new { message = "Transaction successful and wallet updated." });
-             }
-             else
-             {
-                 // User not found
-                 return NotFound("User not found.");
-             }
-         }
-         else
-         {
-             // Log transaction failure details for debugging
-             return BadRequest(new { message = "Transaction failed." });
-         }
-     }
-     catch (Exception ex)
-     {
-         // Log detailed error for troubleshooting
-         // For example, you might want to use a logging framework
-         return StatusCode(500, new { message = "Internal server error", details = ex.Message });
-     }
- }*/
-
-//// 1. Create Payment URL
-//[HttpPost("Checkout")]
-//public async Task<IActionResult> Checkout([FromBody] VnPaymentRequestModel paymentRequest)
-//{
-//    try
-//    {
-//        var paymentUrl = await _paymentService.InitiateCheckoutAsync(HttpContext, paymentRequest);
-//        return Ok(new { PaymentUrl = paymentUrl });
-//    }
-//    catch (UserNotFoundException)
-//    {
-//        return NotFound("User not found.");
-//    }
-//    catch (Exception ex)
-//    {
-//        return StatusCode(500, new { message = "Internal server error", details = ex.Message });
-//    }
-//}
-
-
-
-//[HttpGet("CheckoutCallback")]
-//public async Task<IActionResult> CheckoutCallback()
-//{
-//    try
-//    {
-//        var message = await _paymentService.ProcessCheckoutCallbackAsync(HttpContext.Request.Query);
-//        return Ok(new { message });
-//    }
-//    catch (TransactionNotFoundException)
-//    {
-//        return NotFound("Transaction not found.");
-//    }
-//    catch (Exception ex)
-//    {
-//        return StatusCode(500, new { message = "Internal server error", details = ex.Message });
-//    }
-//}
+  
