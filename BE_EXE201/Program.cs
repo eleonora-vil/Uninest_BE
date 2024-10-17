@@ -5,12 +5,21 @@ using BE_EXE201.Extensions;
 using BE_EXE201.Middlewares;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.OpenApi.Models;
+using Net.payOS;
 
 public class Program
 {
     public static async Task Main(string[] args)
     {
+
+        IConfiguration configuration = new ConfigurationBuilder().AddJsonFile("appsettings.json").Build();
+
+        PayOS payOS = new PayOS(configuration["Environment:PAYOS_CLIENT_ID"] ?? throw new Exception("Cannot find environment"),
+                            configuration["Environment:PAYOS_API_KEY"] ?? throw new Exception("Cannot find environment"),
+                            configuration["Environment:PAYOS_CHECKSUM_KEY"] ?? throw new Exception("Cannot find environment"));
         var builder = WebApplication.CreateBuilder(args);
+
+        builder.Services.AddSingleton(payOS);
 
         builder.Services.AddInfrastructure(builder.Configuration);
 
