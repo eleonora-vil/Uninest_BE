@@ -24,6 +24,7 @@ public static class ServicesExtensions
     public static IServiceCollection AddInfrastructure(this IServiceCollection services, IConfiguration configuration)
     {
         services.AddScoped<ExceptionMiddleware>();
+        services.AddHttpContextAccessor();
         services.AddControllers();
         services.AddEndpointsApiExplorer();
         services.AddSwaggerGen();

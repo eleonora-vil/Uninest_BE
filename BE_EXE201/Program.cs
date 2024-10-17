@@ -21,6 +21,7 @@ public class Program
 
         builder.Services.AddSingleton(payOS);
 
+
         builder.Services.AddInfrastructure(builder.Configuration);
 
         builder.Services.AddSwaggerGen(option =>

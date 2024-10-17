@@ -8,6 +8,7 @@ using BE_EXE201.Dtos.Payment;
 using Net.payOS;
 using Net.payOS.Types;
 using System.Security.Claims;
+using Microsoft.EntityFrameworkCore;
 
 
 namespace BE_EXE201.Controllers
@@ -22,13 +23,15 @@ namespace BE_EXE201.Controllers
         private readonly PaymentService _paymentService;
         private readonly AppDbContext _dbContext;
         private readonly PayOS _payOS;
+        private readonly IHttpContextAccessor _httpContextAccessor;
+
 
 
         public PaymentController(IVnPayService vnPayService,
             UserService userService,
             IRepository<User, int> userRepository,
             AppDbContext dbContext,
-            PaymentService paymentService, PayOS payOS)
+            PaymentService paymentService, PayOS payOS, IHttpContextAccessor httpContextAccessor)
         {
             _vnPayService = vnPayService;
             _userService = userService;
@@ -36,45 +39,7 @@ namespace BE_EXE201.Controllers
             _paymentService = paymentService;
             _dbContext = dbContext; // Initialize the dbContext
             _payOS = payOS;
-        }
-
-        // 1. Create Payment URL
-        [HttpPost("Checkout")]
-        public async Task<IActionResult> Checkout([FromBody] VnPaymentRequestModel paymentRequest)
-        {
-            try
-            {
-                var paymentUrl = await _paymentService.InitiateCheckoutAsync(HttpContext, paymentRequest);
-                return Ok(new { PaymentUrl = paymentUrl });
-            }
-            catch (UserNotFoundException)
-            {
-                return NotFound("User not found.");
-            }
-            catch (Exception ex)
-            {
-                return StatusCode(500, new { message = "Internal server error", details = ex.Message });
-            }
-        }
-
-
-
-        [HttpGet("CheckoutCallback")]
-        public async Task<IActionResult> CheckoutCallback()
-        {
-            try
-            {
-                var message = await _paymentService.ProcessCheckoutCallbackAsync(HttpContext.Request.Query);
-                return Ok(new { message });
-            }
-            catch (TransactionNotFoundException)
-            {
-                return NotFound("Transaction not found.");
-            }
-            catch (Exception ex)
-            {
-                return StatusCode(500, new { message = "Internal server error", details = ex.Message });
-            }
+            _httpContextAccessor = httpContextAccessor;
         }
 
         [HttpPost("CreatePayOSLink")]
@@ -82,12 +47,28 @@ namespace BE_EXE201.Controllers
         {
             try
             {
+                // Get the current user's email from the JWT token
+                var userEmail = _httpContextAccessor.HttpContext.User.FindFirstValue(ClaimTypes.Email);
+                if (string.IsNullOrEmpty(userEmail))
+                {
+                    return Unauthorized("User not authenticated");
+                }
+
+                // Find the user in the database
+                var user = await _dbContext.Users.FirstOrDefaultAsync(u => u.Email == userEmail);
+                if (user == null)
+                {
+                    return NotFound("User not found");
+                }
 
                 int orderCode = int.Parse(DateTimeOffset.Now.ToString("ffffff"));
 
                 ItemData item = new ItemData(body.productName, 1, body.price);
                 List<ItemData> items = new List<ItemData>();
                 items.Add(item);
+
+                string buyerName = !string.IsNullOrEmpty(body.buyerName) ? body.buyerName : user.FullName;
+
                 PaymentData paymentData = new PaymentData(
                     orderCode,
                     body.price,
@@ -95,11 +76,44 @@ namespace BE_EXE201.Controllers
                     items,
                     body.cancelUrl,
                     body.returnUrl,
-                    body.buyerName
+                    buyerName
                     );
-                CreatePaymentResult createPayment = await _payOS.createPaymentLink(paymentData);
-                return Ok(new Response(0, "success", createPayment));
+                using (var transaction = await _dbContext.Database.BeginTransactionAsync())
+                {
+                    try
+                    {
+                        CreatePaymentResult createPayment = await _payOS.createPaymentLink(paymentData);
 
+                        // Update user's wallet
+                        user.Wallet = (user.Wallet ?? 0) + body.price;
+                        _dbContext.Entry(user).Property(u => u.Wallet).IsModified = true;
+
+                        await _dbContext.SaveChangesAsync();
+
+                        await transaction.CommitAsync();
+
+                        // Prepare response with updated user info
+                        var updatedUserInfo = new
+                        {
+                            user.UserId,
+                            user.FullName,
+                            user.Email,
+                            user.PhoneNumber,
+                            user.Wallet
+                        };
+
+                        return Ok(new Response(0, "success", new
+                        {
+                            paymentInfo = createPayment,
+                            userInfo = updatedUserInfo
+                        }));
+                    }
+                    catch (Exception ex)
+                    {
+                        await transaction.RollbackAsync();
+                        throw;
+                    }
+                }
             }
             catch (System.Exception exception)
             {
@@ -241,3 +255,42 @@ namespace BE_EXE201.Controllers
          return StatusCode(500, new { message = "Internal server error", details = ex.Message });
      }
  }*/
+
+//// 1. Create Payment URL
+//[HttpPost("Checkout")]
+//public async Task<IActionResult> Checkout([FromBody] VnPaymentRequestModel paymentRequest)
+//{
+//    try
+//    {
+//        var paymentUrl = await _paymentService.InitiateCheckoutAsync(HttpContext, paymentRequest);
+//        return Ok(new { PaymentUrl = paymentUrl });
+//    }
+//    catch (UserNotFoundException)
+//    {
+//        return NotFound("User not found.");
+//    }
+//    catch (Exception ex)
+//    {
+//        return StatusCode(500, new { message = "Internal server error", details = ex.Message });
+//    }
+//}
+
+
+
+//[HttpGet("CheckoutCallback")]
+//public async Task<IActionResult> CheckoutCallback()
+//{
+//    try
+//    {
+//        var message = await _paymentService.ProcessCheckoutCallbackAsync(HttpContext.Request.Query);
+//        return Ok(new { message });
+//    }
+//    catch (TransactionNotFoundException)
+//    {
+//        return NotFound("Transaction not found.");
+//    }
+//    catch (Exception ex)
+//    {
+//        return StatusCode(500, new { message = "Internal server error", details = ex.Message });
+//    }
+//}
