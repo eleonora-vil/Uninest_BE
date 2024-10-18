@@ -174,8 +174,9 @@ namespace BE_EXE201.Controllers
         }
 
         [HttpPost("CheckOrderAndUpdateWallet")]
-        public async Task<IActionResult> CheckOrderAndUpdateWallet([FromBody] int orderCode)
+        public async Task<IActionResult> CheckOrderAndUpdateWallet([FromBody] CheckOrderRequest request)
         {
+            int orderCode = request.OrderCode;
             try
             {
                 // Get the current user's email from the JWT token
@@ -244,4 +245,3 @@ namespace BE_EXE201.Controllers
         }
     }
 }
-  
