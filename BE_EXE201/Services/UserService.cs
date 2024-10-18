@@ -310,7 +310,7 @@ namespace BE_EXE201.Services
         public async Task<User?> GetUserByOrderId(string orderId)
         {
             var transaction = _paymentTransactionRepository
-                .FindByCondition(pt => pt.OrderId == orderId)
+                .FindByCondition(pt => pt.TransactionId == orderId)
                 .FirstOrDefault();
 
             if (transaction is not null)
@@ -329,7 +329,7 @@ namespace BE_EXE201.Services
 
             // Retrieve the existing payment transaction based on OrderId
             var existingTransaction = await _paymentTransactionRepository
-                .FindByCondition(pt => pt.OrderId == paymentResponse.OrderId)
+                .FindByCondition(pt => pt.TransactionId == paymentResponse.OrderId)
                 .FirstOrDefaultAsync();
 
             if (existingTransaction != null)

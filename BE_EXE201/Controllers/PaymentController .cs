@@ -20,7 +20,6 @@ namespace BE_EXE201.Controllers
         private readonly IVnPayService _vnPayService;
         private readonly UserService _userService; // Assume it handles wallet updates
         private readonly IRepository<User, int> _userRepository;
-        private readonly PaymentService _paymentService;
         private readonly AppDbContext _dbContext;
         private readonly PayOS _payOS;
         private readonly IHttpContextAccessor _httpContextAccessor;
@@ -31,12 +30,12 @@ namespace BE_EXE201.Controllers
             UserService userService,
             IRepository<User, int> userRepository,
             AppDbContext dbContext,
-            PaymentService paymentService, PayOS payOS, IHttpContextAccessor httpContextAccessor)
+            PayOS payOS, IHttpContextAccessor httpContextAccessor)
         {
             _vnPayService = vnPayService;
             _userService = userService;
             _userRepository = userRepository;
-            _paymentService = paymentService;
+
             _dbContext = dbContext; // Initialize the dbContext
             _payOS = payOS;
             _httpContextAccessor = httpContextAccessor;
@@ -49,6 +48,8 @@ namespace BE_EXE201.Controllers
             {
                 // Get the current user's email from the JWT token
                 var userEmail = _httpContextAccessor.HttpContext.User.FindFirstValue(ClaimTypes.Email);
+
+
                 if (string.IsNullOrEmpty(userEmail))
                 {
                     return Unauthorized("User not authenticated");
@@ -80,6 +81,20 @@ namespace BE_EXE201.Controllers
                     );
 
                 CreatePaymentResult createPayment = await _payOS.createPaymentLink(paymentData);
+
+                // Save the payment information to the database
+                var paymentTransaction = new PaymentTransaction
+                {
+                    TransactionId = createPayment.orderCode.ToString(),
+                    UserId = user.UserId,
+                    Amount = body.price,
+                    Status = "PENDING", // Initial status when creating the link
+                    CreateDate = DateTime.UtcNow,
+                    UpdatedDate = DateTime.UtcNow
+                };
+
+                _dbContext.PaymentTransactions.Add(paymentTransaction);
+                await _dbContext.SaveChangesAsync();
 
                 // Prepare response with current user info
                 var currentUserInfo = new
@@ -243,5 +258,85 @@ namespace BE_EXE201.Controllers
                 return Ok(new Response(-1, "fail", null));
             }
         }
+
+        //[HttpPost("ConfirmPurchase")]
+        //public async Task<IActionResult> ConfirmPurchase([FromBody] CheckOrderRequest request)
+        //{
+        //    int orderCode = request.OrderCode;
+        //    try
+        //    {
+        //        // Get the current user's email from the JWT token
+        //        var userEmail = _httpContextAccessor.HttpContext.User.FindFirstValue(ClaimTypes.Email);
+        //        if (string.IsNullOrEmpty(userEmail))
+        //        {
+        //            return Unauthorized("User not authenticated");
+        //        }
+
+        //        // Find the user in the database
+        //        var user = await _dbContext.Users.FirstOrDefaultAsync(u => u.Email == userEmail);
+        //        if (user == null)
+        //        {
+        //            return NotFound("User not found");
+        //        }
+
+        //        PaymentLinkInformation paymentLinkInformation = await _payOS.getPaymentLinkInformation(orderCode);
+
+        //        if (paymentLinkInformation.status == "PAID")
+        //        {
+        //            using (var transaction = await _dbContext.Database.BeginTransactionAsync())
+        //            {
+        //                try
+        //                {
+        //                    // Create a new purchase record
+        //                    var purchase = new Purchase
+        //                    {
+        //                        UserId = user.UserId,
+        //                        OrderCode = orderCode,
+        //                        Amount = paymentLinkInformation.amountPaid,
+        //                        PurchaseDate = DateTime.UtcNow,
+        //                        Status = "Completed"
+        //                    };
+
+        //                    _dbContext.Purchases.Add(purchase);
+        //                    await _dbContext.SaveChangesAsync();
+
+        //                    await transaction.CommitAsync();
+
+        //                    // Prepare response with purchase info
+        //                    var purchaseInfo = new
+        //                    {
+        //                        purchase.PurchaseId,
+        //                        purchase.OrderCode,
+        //                        purchase.Amount,
+        //                        purchase.PurchaseDate,
+        //                        purchase.Status
+        //                    };
+
+        //                    return Ok(new Response(0, "Purchase confirmed successfully", new
+        //                    {
+        //                        paymentInfo = paymentLinkInformation,
+        //                        purchaseInfo = purchaseInfo
+        //                    }));
+        //                }
+        //                catch (Exception ex)
+        //                {
+        //                    await transaction.RollbackAsync();
+        //                    _logger.LogError(ex, "Error confirming purchase");
+        //                    return StatusCode(500, new Response(-1, "An error occurred while confirming the purchase", null));
+        //                }
+        //            }
+        //        }
+        //        else
+        //        {
+        //            return Ok(new Response(0, "Payment not completed yet", new { paymentInfo = paymentLinkInformation }));
+        //        }
+        //    }
+        //    catch (Exception exception)
+        //    {
+        //        _logger.LogError(exception, "Error in ConfirmPurchase");
+        //        return StatusCode(500, new Response(-1, "An unexpected error occurred", null));
+        //    }
+        //}
+
     }
 }
