@@ -409,15 +409,16 @@ namespace BE_EXE201.Services
                     throw new InvalidOperationException("User is already an active member");
                 }
 
+                // Check if the user has sufficient funds in their wallet
                 if (user.Wallet < MembershipFee)
                 {
-                    throw new InvalidOperationException("Insufficient funds in wallet");
+                    throw new InvalidOperationException($"Insufficient funds in wallet. Required: {MembershipFee}, Available: {user.Wallet}");
                 }
 
                 user.IsMember = true;
                 user.MembershipStartDate = DateTime.UtcNow;
                 user.MembershipEndDate = DateTime.UtcNow.AddMonths(3);
-                user.AutoRenewMembership = autoRenew; // You can make this configurable if needed
+                user.AutoRenewMembership = autoRenew;
                 user.Wallet -= MembershipFee;
 
                 _userRepository.Update(user);
