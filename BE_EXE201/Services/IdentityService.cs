@@ -126,7 +126,9 @@ public class IdentityService
                 Authenticated = false,
                 Token = null,
                 Message = "Invalid email.",
-                UserId = 0
+                UserId = 0,
+                Wallet = 0,
+                IsMember = false,
             };
         }
 
@@ -138,7 +140,9 @@ public class IdentityService
                 Authenticated = false,
                 Token = null,
                 Message = "Invalid password.",
-                UserId = 0
+                UserId = 0,
+                Wallet = 0,
+                IsMember = false,
             };
         }
         if (user.Status != "Active")
@@ -149,7 +153,9 @@ public class IdentityService
                 Authenticated = false,
                 Token = null,
                 Message = "Please verify your email. An OTP has been sent to your email.",
-                UserId = 0
+                UserId = 0,
+                Wallet = 0,
+                IsMember = false,
             };
         }
 
@@ -159,7 +165,9 @@ public class IdentityService
             Authenticated = true,
             Token = CreateJwtToken(user),
             Message = "Login successful.",
-            UserId = user.UserId
+            UserId = user.UserId,
+            Wallet = (decimal)user.Wallet,
+            IsMember =(bool) user.IsMember,
         };
     }
 

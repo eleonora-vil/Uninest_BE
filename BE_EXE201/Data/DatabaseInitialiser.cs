@@ -82,8 +82,9 @@ namespace BE_EXE201.Data
                 CreateDate = DateTime.UtcNow,
                 Status = "Active",
                 UserRole = adminRole,
+                IsMember = true,
                 AvatarUrl = "",
-                Wallet = 1000
+                Wallet = 100000
             };
 
             var ownerUser = new User
@@ -98,9 +99,10 @@ namespace BE_EXE201.Data
                 PhoneNumber = "0987654321",
                 CreateDate = DateTime.UtcNow,
                 Status = "Active",
-                UserRole=ownerRole,
+                UserRole = ownerRole,
                 AvatarUrl = "",
-                Wallet = 500
+                IsMember = false,
+                Wallet = 100000
             };
 
             var tenantUser = new User
@@ -117,6 +119,7 @@ namespace BE_EXE201.Data
                 Status = "Active",
                 UserRole=tenantRole,
                 AvatarUrl = "",
+                IsMember = false,
                 Wallet = 200
             };
 
