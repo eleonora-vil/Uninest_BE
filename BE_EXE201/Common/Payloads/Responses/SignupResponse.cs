@@ -3,5 +3,6 @@
     public class SignupResponse
     {
         public string Messages { get; set; }
+        public string Status { get; set; }
     }
 }
