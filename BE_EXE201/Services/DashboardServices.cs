@@ -31,38 +31,35 @@ namespace BE_EXE201.Services
         {
             return await _homeRepository.CountAsync();
         }
+        public async Task<int> GetTotalTransactions()
+        {
+            return await _paymentTransactionRepository.CountAsync();
+        }
 
         public async Task<decimal> GetTotalEarningsFromActiveTransactions()
         {
-            Expression<Func<PaymentTransaction, bool>> predicate = pt => pt.Status == "active";
+            Expression<Func<PaymentTransaction, bool>> predicate = pt => pt.Status == "PAID";
             Expression<Func<PaymentTransaction, decimal>> selector = pt => pt.Amount;
 
             return await _paymentTransactionRepository.SumAsync(predicate, selector);
         }
 
-        public async Task<IEnumerable<object>> GetTotalEarningsByDayForLastSevenDays()
+        public async Task<IEnumerable<object>> GetWeeklyTransactionAmounts()
         {
-            Expression<Func<PaymentTransaction, bool>> predicate = pt => pt.Status == "active";
-            var transactions = await _paymentTransactionRepository.GetLastSevenDaysTransactionsAsync(predicate);
+            var transactions = await _paymentTransactionRepository.GetLastSevenDaysTransactionsAsync();
 
             var groupedTransactions = transactions
-                .GroupBy(t => t.UpdatedDate.Date)
-                .Select(g => new
+                .GroupBy(t => t.CreateDate.DayOfWeek)
+                .ToDictionary(g => g.Key, g => g.Sum(t => t.Amount));
+
+            var result = Enum.GetValues(typeof(DayOfWeek))
+                .Cast<DayOfWeek>()
+                .Select(day => new
                 {
-                    Date = g.Key.DayOfWeek.ToString(),
-                    TotalEarnings = g.Sum(t => t.Amount)
+                    DayOfWeek = day.ToString(),
+                    Amount = groupedTransactions.ContainsKey(day) ? groupedTransactions[day] : 0m
                 })
-                .OrderBy(g => g.Date)
-                .ToList();
-
-            var result = new List<object>();
-            var daysOfWeek = Enum.GetValues(typeof(DayOfWeek)).Cast<DayOfWeek>();
-
-            foreach (var day in daysOfWeek)
-            {
-                var earnings = groupedTransactions.FirstOrDefault(g => g.Date == day.ToString())?.TotalEarnings ?? 0;
-                result.Add(new { Day = day.ToString(), TotalEarnings = earnings });
-            }
+                .OrderBy(x => x.DayOfWeek);
 
             return result;
         }

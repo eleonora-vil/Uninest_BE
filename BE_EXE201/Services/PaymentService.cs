@@ -9,7 +9,7 @@ using Net.payOS.Types;
 
 namespace BE_EXE201.Services
 {
-    public class PaymentService 
+    public class PaymentService
     {
         private readonly IRepository<User, int> _userRepository;
         private readonly IRepository<PaymentTransaction, string> _paymentTransactionRepository;
@@ -92,24 +92,55 @@ namespace BE_EXE201.Services
 
             if (paymentLinkInformation.status == "PAID")
             {
-                user.Wallet = (user.Wallet ?? 0) + paymentLinkInformation.amountPaid;
-                _userRepository.Update(user);
-                await _userRepository.Commit();
-
-                var updatedUserInfo = new
+                using var transaction = await _paymentTransactionRepository.BeginTransactionAsync();
+                try
                 {
-                    user.UserId,
-                    user.FullName,
-                    user.Email,
-                    user.PhoneNumber,
-                    user.Wallet
-                };
+                    // Find the existing payment transaction
+                    var paymentTransaction = await _paymentTransactionRepository
+                        .FindByCondition(pt => pt.TransactionId == orderCode.ToString())
+                        .FirstOrDefaultAsync();
 
-                return new Response(0, "Wallet updated successfully", new { paymentInfo = paymentLinkInformation, userInfo = updatedUserInfo });
+                    if (paymentTransaction == null)
+                    {
+                        return new Response(-1, "Transaction not found", null);
+                    }
+
+                    // Update transaction status and date
+                    paymentTransaction.Status = "PAID";
+                    paymentTransaction.UpdatedDate = DateTime.UtcNow;
+                    _paymentTransactionRepository.Update(paymentTransaction);
+
+                    // Update user's wallet
+                    user.Wallet = (user.Wallet ?? 0) + paymentLinkInformation.amountPaid;
+                    _userRepository.Update(user);
+
+                    // Commit all changes
+                    await _paymentTransactionRepository.Commit();
+                    await _userRepository.Commit();
+
+                    await transaction.CommitAsync();
+
+                    var updatedUserInfo = new
+                    {
+                        user.UserId,
+                        user.FullName,
+                        user.Email,
+                        user.PhoneNumber,
+                        user.Wallet
+                    };
+
+                    return new Response(0, "Wallet updated successfully", new { paymentInfo = paymentLinkInformation, userInfo = updatedUserInfo });
+                }
+                catch (Exception ex)
+                {
+                    await transaction.RollbackAsync();
+                    return new Response(-1, $"Error updating wallet: {ex.Message}", null);
+                }
             }
 
             return new Response(0, "Payment not completed yet", new { paymentInfo = paymentLinkInformation });
         }
+
 
         public async Task<Response> CancelOrderAsync(int orderCode, string reason)
         {
