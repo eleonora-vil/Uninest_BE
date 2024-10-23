@@ -4,12 +4,12 @@ using Net.payOS.Types;
 using Net.payOS;
 using Microsoft.EntityFrameworkCore;
 
-
 public class TransactionSyncService : BackgroundService
 {
     private readonly IServiceProvider _serviceProvider;
     private readonly ILogger<TransactionSyncService> _logger;
     private readonly PayOS _payOS;
+    private const int BatchSize = 100; // Adjust this value as needed
 
     public TransactionSyncService(IServiceProvider serviceProvider, ILogger<TransactionSyncService> logger, PayOS payOS)
     {
@@ -31,7 +31,7 @@ public class TransactionSyncService : BackgroundService
                 _logger.LogError(ex, "Error occurred while syncing transactions");
             }
 
-            await Task.Delay(TimeSpan.FromMinutes(1), stoppingToken); // Run every 1 minute
+            await Task.Delay(TimeSpan.FromMinutes(15), stoppingToken); // Run every 1 minute
         }
     }
 
@@ -40,63 +40,93 @@ public class TransactionSyncService : BackgroundService
         using var scope = _serviceProvider.CreateScope();
         var dbContext = scope.ServiceProvider.GetRequiredService<AppDbContext>();
 
-        long latestOrderId = await GetLatestOrderId();
+        int latestId = await GetLatestId();
+        int currentId = latestId;
+        bool hasMoreTransactions = true;
 
-        while (true)
+        while (hasMoreTransactions)
         {
-            try
+            int processedCount = 0;
+            for (int i = 0; i < BatchSize; i++)
             {
-                var paymentInfo = await _payOS.getPaymentLinkInformation(latestOrderId + 1);
-
-                // If we get here, a new order exists
-                await SaveTransaction(dbContext, paymentInfo);
-
-                if (long.TryParse(paymentInfo.orderCode.ToString(), out long newOrderId))
+                try
                 {
-                    latestOrderId = newOrderId;
+                    long? transactionId = await GetTransactionIdById(dbContext, currentId);
+                    if (!transactionId.HasValue)
+                    {
+                        hasMoreTransactions = false;
+                        break;
+                    }
+
+                    var paymentInfo = await _payOS.getPaymentLinkInformation(transactionId.Value);
+
+                    await SaveTransaction(dbContext, paymentInfo);
+                    currentId--;
+                    processedCount++;
                 }
-                else
+                catch (PayOSError ex) when (ex.Code == "429")
                 {
-                    _logger.LogWarning($"Unable to parse orderCode: {paymentInfo.orderCode}");
+                    _logger.LogWarning("Rate limit reached. Pausing sync process.");
+                    await Task.Delay(TimeSpan.FromSeconds(30)); // Wait for 30 seconds before retrying
                     break;
                 }
+                catch (PayOSError ex) when (ex.Code == "14")
+                {
+                    // No new orders found, we can stop
+                    hasMoreTransactions = false;
+                    break;
+                }
+                catch (Exception ex)
+                {
+                    _logger.LogError(ex, $"Error processing order with Id {currentId}");
+                    currentId++; // Move to the next ID even if there's an error
+                    continue;
+                }
             }
-            catch (PayOSError ex) when (ex.Code == "429")
+
+            await dbContext.SaveChangesAsync();
+            _logger.LogInformation($"Processed {processedCount} transactions. Last processed ID: {currentId - 1}");
+
+            if (processedCount == 0)
             {
-                // We've reached the rate limit, so we'll stop for now
-                _logger.LogWarning("Rate limit reached. Stopping sync process.");
-                break;
-            }
-            catch (PayOSError ex) when (ex.Code == "14")
-            {
-                // No new orders found, we can stop
-                break;
-            }
-            catch (Exception ex)
-            {
-                _logger.LogError(ex, $"Error processing order {latestOrderId + 1}");
-                break;
+                hasMoreTransactions = false;
             }
         }
 
-        await dbContext.SaveChangesAsync();
+        _logger.LogInformation("Finished syncing all transactions");
     }
 
-    private async Task<long> GetLatestOrderId()
+    private async Task<int> GetLatestId()
     {
         using var scope = _serviceProvider.CreateScope();
         var dbContext = scope.ServiceProvider.GetRequiredService<AppDbContext>();
 
         var latestTransaction = await dbContext.PaymentTransactions
-            .OrderByDescending(pt => pt.TransactionId)
+            .OrderByDescending(pt => pt.Id)
             .FirstOrDefaultAsync();
 
-        if (latestTransaction != null && long.TryParse(latestTransaction.TransactionId, out long result))
+        return latestTransaction?.Id ?? 0;
+    }
+
+    private async Task<long?> GetTransactionIdById(AppDbContext dbContext, int id)
+    {
+        var transactionIdString = await dbContext.PaymentTransactions
+            .Where(pt => pt.Id == id)
+            .Select(pt => pt.TransactionId)
+            .FirstOrDefaultAsync();
+
+        if (string.IsNullOrEmpty(transactionIdString))
+        {
+            return null;
+        }
+
+        if (long.TryParse(transactionIdString, out long result))
         {
             return result;
         }
 
-        return 0;
+        _logger.LogWarning($"Invalid TransactionId format for Id {id}: {transactionIdString}");
+        return null;
     }
 
     private async Task SaveTransaction(AppDbContext dbContext, PaymentLinkInformation paymentInfo)
@@ -119,7 +149,6 @@ public class TransactionSyncService : BackgroundService
         }
         else
         {
-            // Optionally update existing transaction if needed
             existingTransaction.Status = paymentInfo.status;
             existingTransaction.UpdatedDate = DateTime.UtcNow;
             dbContext.Entry(existingTransaction).State = EntityState.Modified;

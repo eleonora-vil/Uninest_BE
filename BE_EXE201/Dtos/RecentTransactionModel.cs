@@ -6,5 +6,8 @@
         public string Username { get; set; }
         public string Status { get; set; }
         public decimal Amount { get; set; }
+        public DateTime CreateDate { get; set; }
+
+
     }
 }

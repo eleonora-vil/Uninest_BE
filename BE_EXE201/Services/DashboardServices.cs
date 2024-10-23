@@ -85,7 +85,8 @@ namespace BE_EXE201.Services
                 TransactionId = t.TransactionId,
                 Username = users.FirstOrDefault(u => u.UserId == t.UserId)?.UserName ?? "Unknown",
                 Status = t.Status,
-                Amount = t.Amount
+                Amount = t.Amount,
+                CreateDate = t.CreateDate,
             });
         }
 

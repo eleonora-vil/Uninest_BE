@@ -78,7 +78,7 @@ where TEntity : class
     }
     public async Task<IEnumerable<TEntity>> GetRecentTransactionsAsync(int count)
     {
-        return await _dbSet.OrderByDescending(e => EF.Property<DateTime>(e, "UpdatedDate"))
+        return await _dbSet.OrderByDescending(e => EF.Property<DateTime>(e, "CreateDate"))
                            .Take(count)
                            .ToListAsync();
     }
