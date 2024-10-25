@@ -31,7 +31,7 @@ public class TransactionSyncService : BackgroundService
                 _logger.LogError(ex, "Error occurred while syncing transactions");
             }
 
-            await Task.Delay(TimeSpan.FromMinutes(15), stoppingToken); // Run every 1 minute
+            await Task.Delay(TimeSpan.FromMinutes(10), stoppingToken);
         }
     }
 

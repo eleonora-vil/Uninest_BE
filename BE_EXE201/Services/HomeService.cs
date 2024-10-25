@@ -20,8 +20,8 @@ namespace BE_EXE201.Services
 
         public HomeService(IRepository<Home, int> homeRepository,
             IRepository<HomeImage, int> homeImageRepository,
-            IRepository<Location,int> locationRepository,
-            IRepository<Utilities,int> utilitiesRepository,
+            IRepository<Location, int> locationRepository,
+            IRepository<Utilities, int> utilitiesRepository,
             CloudService cloudService, IMapper mapper)
         {
             _homeRepository = homeRepository;
@@ -105,6 +105,7 @@ namespace BE_EXE201.Services
                 .ThenInclude(hi => hi.Image)
                 .Include(h => h.Location) // Include Location
                 .Include(h => h.Utilities) // Include Utilities
+                .Include(h => h.User)
                 .FirstOrDefaultAsync(h => h.HomeId == id);
 
             if (home is not null)
@@ -146,6 +147,13 @@ namespace BE_EXE201.Services
                         AirConditioner = home.Utilities.AirConditioner
                     } : null,
 
+                    Users = home.User != null ? new UserModel
+                    {
+                        UserId = home.User.UserId,
+                        PhoneNumber = home.User.PhoneNumber,
+                        FullName = home.User.FullName,
+                        Email = home.User.Email
+                    } : null,
                     // Map Home Images
                     HomeImages = home.HomeImages.Select(hi => new HomeImageModel
                     {
@@ -280,7 +288,7 @@ namespace BE_EXE201.Services
                 {
                     // Update basic home info
                     if (!string.IsNullOrEmpty(req.Name)) homeEntity.Name = req.Name;
-                    if (!string.IsNullOrEmpty( req.Price)) homeEntity.Price = req.Price;
+                    if (!string.IsNullOrEmpty(req.Price)) homeEntity.Price = req.Price;
                     if (!string.IsNullOrEmpty(req.Size)) homeEntity.Size = req.Size;
                     if (!string.IsNullOrEmpty(req.Description)) homeEntity.Description = req.Description;
                     if (req.Bathroom.HasValue) homeEntity.Bathroom = req.Bathroom.Value;
@@ -332,7 +340,7 @@ namespace BE_EXE201.Services
                                 var newHomeImage = new HomeImage
                                 {
                                     ImageId = updatedImage.ImageId.Value, // Assuming ImageId is mandatory for new images
-                                  //  ImageDescription = updatedImage.ImageDescription
+                                                                          //  ImageDescription = updatedImage.ImageDescription
                                 };
                                 homeEntity.HomeImages.Add(newHomeImage);
                             }
