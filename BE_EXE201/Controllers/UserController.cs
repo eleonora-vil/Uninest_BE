@@ -151,6 +151,42 @@ namespace BE_EXE201.Controllers
                 return StatusCode(500, "Internal server error: " + ex.Message);
             }
         }
+
+        [HttpPost("UpdateWallet")]
+        //[Authorize(Roles ="Admin")]
+        public async Task<IActionResult> UpdateUserWallet(int userId, decimal amount)
+        {
+            try
+            {
+                if (userId <= 0)
+                {
+                    return BadRequest("Invalid user ID");
+                }
+
+                var existingUser = await _userService.GetUserById(userId);
+
+                if (existingUser == null)
+                {
+                    return NotFound("User not found");
+                }  
+
+                var updatedUser = await _userService.UpdateUserWallet(existingUser, amount);
+
+                if (updatedUser)
+                {
+                    return Ok("Update Wallet Success");
+                }
+                else
+                {
+                    return BadRequest("Failed to update wallet");
+                }
+            }
+            catch (Exception ex)
+            {
+                return StatusCode(500, "Internal server error: " + ex.Message);
+            }
+        }
+
         [HttpPost("ForgotPassword")]
         public async Task<IActionResult> ForgotPassword(ForgotPasswordRequest req)
         {

@@ -99,6 +99,7 @@ namespace BE_EXE201.Services
             return null;
         }
 
+     
 
         public async Task<Response> UpdateUserImageAsync(string userEmail, IFormFile image)
         {
@@ -179,6 +180,37 @@ namespace BE_EXE201.Services
                 return null;
             }
         }
+
+        public async Task<bool> UpdateUserWallet(UserModel user, decimal amount)
+        {
+            try
+            {
+                var existedUser = await _userRepository.FindByCondition(x => x.UserId == user.UserId || x.Email == user.Email).FirstOrDefaultAsync();
+
+                if (existedUser != null)
+                {
+                    // Cập nhật wallet
+                    existedUser.Wallet -= amount;
+
+                    // Cập nhật thông tin người dùng
+                    _userRepository.Update(existedUser);
+
+                    var result = await _userRepository.Commit();
+
+                    return result > 0;
+                }
+                else
+                {
+                    return false; // Người dùng không tồn tại
+                }
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine($"Error updating user password: {ex.Message}");
+                return false;
+            }
+        }
+
         public async Task<bool> UpdateUserPassword(UserModel user, string newPassword)
         {
             try

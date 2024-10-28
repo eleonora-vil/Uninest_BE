@@ -8,4 +8,6 @@ public class LoginResult
     public SecurityToken? Token { get; set; }
     public string? Message { get; set; }
     public int UserId { get; set; }
+    public decimal Wallet { get; set; }
+    public bool IsMember { get; set; }
 }
