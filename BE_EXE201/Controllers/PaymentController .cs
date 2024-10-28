@@ -10,333 +10,153 @@ using Net.payOS.Types;
 using System.Security.Claims;
 using Microsoft.EntityFrameworkCore;
 
-
 namespace BE_EXE201.Controllers
 {
     [ApiController]
     [Route("api/[controller]")]
     public class PaymentController : ControllerBase
     {
-        private readonly IVnPayService _vnPayService;
-        private readonly UserService _userService; // Assume it handles wallet updates
-        private readonly IRepository<User, int> _userRepository;
-        private readonly AppDbContext _dbContext;
-        private readonly PayOS _payOS;
+        private readonly PaymentService _paymentService;
         private readonly IHttpContextAccessor _httpContextAccessor;
 
-
-
-        public PaymentController(IVnPayService vnPayService,
-            UserService userService,
-            IRepository<User, int> userRepository,
-            AppDbContext dbContext,
-            PayOS payOS, IHttpContextAccessor httpContextAccessor)
+        public PaymentController(PaymentService paymentService, IHttpContextAccessor httpContextAccessor)
         {
-            _vnPayService = vnPayService;
-            _userService = userService;
-            _userRepository = userRepository;
-
-            _dbContext = dbContext; // Initialize the dbContext
-            _payOS = payOS;
+            _paymentService = paymentService;
             _httpContextAccessor = httpContextAccessor;
         }
 
         [HttpPost("CreatePayOSLink")]
         public async Task<IActionResult> CreatePaymentLink(CreatePaymentLinkRequest body)
         {
-            try
+            var userEmail = _httpContextAccessor.HttpContext.User.FindFirstValue(ClaimTypes.Email);
+            if (string.IsNullOrEmpty(userEmail))
             {
-                // Get the current user's email from the JWT token
-                var userEmail = _httpContextAccessor.HttpContext.User.FindFirstValue(ClaimTypes.Email);
-
-
-                if (string.IsNullOrEmpty(userEmail))
-                {
-                    return Unauthorized("User not authenticated");
-                }
-
-                // Find the user in the database
-                var user = await _dbContext.Users.FirstOrDefaultAsync(u => u.Email == userEmail);
-                if (user == null)
-                {
-                    return NotFound("User not found");
-                }
-
-                int orderCode = int.Parse(DateTimeOffset.Now.ToString("ffffff"));
-
-                ItemData item = new ItemData(body.productName, 1, body.price);
-                List<ItemData> items = new List<ItemData>();
-                items.Add(item);
-
-                string buyerName = !string.IsNullOrEmpty(body.buyerName) ? body.buyerName : user.FullName;
-
-                PaymentData paymentData = new PaymentData(
-                    orderCode,
-                    body.price,
-                    body.description,
-                    items,
-                    body.cancelUrl,
-                    body.returnUrl,
-                    buyerName
-                    );
-
-                CreatePaymentResult createPayment = await _payOS.createPaymentLink(paymentData);
-
-                // Save the payment information to the database
-                var paymentTransaction = new PaymentTransaction
-                {
-                    TransactionId = createPayment.orderCode.ToString(),
-                    UserId = user.UserId,
-                    Amount = body.price,
-                    Status = "PENDING", // Initial status when creating the link
-                    CreateDate = DateTime.UtcNow,
-                    UpdatedDate = DateTime.UtcNow
-                };
-
-                _dbContext.PaymentTransactions.Add(paymentTransaction);
-                await _dbContext.SaveChangesAsync();
-
-                // Prepare response with current user info
-                var currentUserInfo = new
-                {
-                    user.UserId,
-                    user.FullName,
-                    user.Email,
-                    user.PhoneNumber,
-                    user.Wallet
-                };
-
-                return Ok(new Response(0, "success", new
-                {
-                    paymentInfo = createPayment,
-                    userInfo = currentUserInfo
-                }));
+                return Unauthorized("User not authenticated");
             }
-            catch (System.Exception exception)
-            {
-                Console.WriteLine(exception);
-                return Ok(new Response(-1, "fail", null));
-            }
+
+            var result = await _paymentService.CreatePaymentLinkAsync(userEmail, body);
+            return Ok(result);
         }
-
 
         [HttpGet("getPayOSOrder/{orderCode}")]
         public async Task<IActionResult> GetOrder([FromRoute] int orderCode)
         {
-            try
-            {
-                PaymentLinkInformation paymentLinkInformation = await _payOS.getPaymentLinkInformation(orderCode);
-                return Ok(new Response(0, "Ok", paymentLinkInformation));
-            }
-            catch (System.Exception exception)
-            {
-
-                Console.WriteLine(exception);
-                return Ok(new Response(-1, "fail", null));
-            }
-
+            var result = await _paymentService.GetOrderAsync(orderCode);
+            return Ok(result);
         }
+
         [HttpPut("cancelOrder/{orderCode}")]
         public async Task<IActionResult> CancelOrder([FromRoute] int orderCode, string reason)
         {
-            try
-            {
-                PaymentLinkInformation paymentLinkInformation = await _payOS.cancelPaymentLink(orderCode, reason);
-                return Ok(new Response(0, "Ok", paymentLinkInformation));
-            }
-            catch (System.Exception exception)
-            {
-
-                Console.WriteLine(exception);
-                return Ok(new Response(-1, "fail", null));
-            }
-
+            var result = await _paymentService.CancelOrderAsync(orderCode, reason);
+            return Ok(result);
         }
+
         [HttpPost("confirm-webhook")]
         public async Task<IActionResult> ConfirmWebhook(ConfirmWebhook body)
         {
-            try
-            {
-                await _payOS.confirmWebhook(body.webhook_url);
-                return Ok(new Response(0, "Ok", null));
-            }
-            catch (System.Exception exception)
-            {
-
-                Console.WriteLine(exception);
-                return Ok(new Response(-1, "fail", null));
-            }
+            var result = await _paymentService.ConfirmWebhookAsync(body.webhook_url);
+            return Ok(result);
         }
 
         [HttpPost("payos_transfer_handler")]
-        public IActionResult payOSTransferHandler(WebhookType body)
+        public IActionResult PayOSTransferHandler(WebhookType body)
         {
-            try
-            {
-                WebhookData data = _payOS.verifyPaymentWebhookData(body);
-
-                if (data.description == "Ma giao dich thu nghiem" || data.description == "VQRIO123")
-                {
-                    return Ok(new Response(0, "Ok", null));
-                }
-                return Ok(new Response(0, "Ok", null));
-            }
-            catch (Exception e)
-            {
-                Console.WriteLine(e.Message);
-                return Ok(new Response(-1, "fail", null));
-            }
+            var result = _paymentService.HandleTransferWebhook(body);
+            return Ok(result);
         }
 
         [HttpPost("CheckOrderAndUpdateWallet")]
         public async Task<IActionResult> CheckOrderAndUpdateWallet([FromBody] CheckOrderRequest request)
         {
-            int orderCode = request.OrderCode;
-            try
+            var userEmail = _httpContextAccessor.HttpContext.User.FindFirstValue(ClaimTypes.Email);
+            if (string.IsNullOrEmpty(userEmail))
             {
-                // Get the current user's email from the JWT token
-                var userEmail = _httpContextAccessor.HttpContext.User.FindFirstValue(ClaimTypes.Email);
-                if (string.IsNullOrEmpty(userEmail))
-                {
-                    return Unauthorized("User not authenticated");
-                }
-
-                // Find the user in the database
-                var user = await _dbContext.Users.FirstOrDefaultAsync(u => u.Email == userEmail);
-                if (user == null)
-                {
-                    return NotFound("User not found");
-                }
-
-                PaymentLinkInformation paymentLinkInformation = await _payOS.getPaymentLinkInformation(orderCode);
-
-                if (paymentLinkInformation.status == "PAID")
-                {
-                    using (var transaction = await _dbContext.Database.BeginTransactionAsync())
-                    {
-                        try
-                        {
-                            // Update user's wallet
-                            user.Wallet = (user.Wallet ?? 0) + paymentLinkInformation.amountPaid;
-                            _dbContext.Entry(user).Property(u => u.Wallet).IsModified = true;
-
-                            await _dbContext.SaveChangesAsync();
-
-                            await transaction.CommitAsync();
-
-                            // Prepare response with updated user info
-                            var updatedUserInfo = new
-                            {
-                                user.UserId,
-                                user.FullName,
-                                user.Email,
-                                user.PhoneNumber,
-                                user.Wallet
-                            };
-
-                            return Ok(new Response(0, "Wallet updated successfully", new
-                            {
-                                paymentInfo = paymentLinkInformation,
-                                userInfo = updatedUserInfo
-                            }));
-                        }
-                        catch (Exception ex)
-                        {
-                            await transaction.RollbackAsync();
-                            throw;
-                        }
-                    }
-                }
-                else
-                {
-                    return Ok(new Response(0, "Payment not completed yet", new { paymentInfo = paymentLinkInformation }));
-                }
+                return Unauthorized("User not authenticated");
             }
-            catch (System.Exception exception)
-            {
-                Console.WriteLine(exception);
-                return Ok(new Response(-1, "fail", null));
-            }
+
+            var result = await _paymentService.CheckOrderAndUpdateWalletAsync(userEmail, request.OrderCode);
+            return Ok(result);
         }
-
-        //[HttpPost("ConfirmPurchase")]
-        //public async Task<IActionResult> ConfirmPurchase([FromBody] CheckOrderRequest request)
-        //{
-        //    int orderCode = request.OrderCode;
-        //    try
-        //    {
-        //        // Get the current user's email from the JWT token
-        //        var userEmail = _httpContextAccessor.HttpContext.User.FindFirstValue(ClaimTypes.Email);
-        //        if (string.IsNullOrEmpty(userEmail))
-        //        {
-        //            return Unauthorized("User not authenticated");
-        //        }
-
-        //        // Find the user in the database
-        //        var user = await _dbContext.Users.FirstOrDefaultAsync(u => u.Email == userEmail);
-        //        if (user == null)
-        //        {
-        //            return NotFound("User not found");
-        //        }
-
-        //        PaymentLinkInformation paymentLinkInformation = await _payOS.getPaymentLinkInformation(orderCode);
-
-        //        if (paymentLinkInformation.status == "PAID")
-        //        {
-        //            using (var transaction = await _dbContext.Database.BeginTransactionAsync())
-        //            {
-        //                try
-        //                {
-        //                    // Create a new purchase record
-        //                    var purchase = new Purchase
-        //                    {
-        //                        UserId = user.UserId,
-        //                        OrderCode = orderCode,
-        //                        Amount = paymentLinkInformation.amountPaid,
-        //                        PurchaseDate = DateTime.UtcNow,
-        //                        Status = "Completed"
-        //                    };
-
-        //                    _dbContext.Purchases.Add(purchase);
-        //                    await _dbContext.SaveChangesAsync();
-
-        //                    await transaction.CommitAsync();
-
-        //                    // Prepare response with purchase info
-        //                    var purchaseInfo = new
-        //                    {
-        //                        purchase.PurchaseId,
-        //                        purchase.OrderCode,
-        //                        purchase.Amount,
-        //                        purchase.PurchaseDate,
-        //                        purchase.Status
-        //                    };
-
-        //                    return Ok(new Response(0, "Purchase confirmed successfully", new
-        //                    {
-        //                        paymentInfo = paymentLinkInformation,
-        //                        purchaseInfo = purchaseInfo
-        //                    }));
-        //                }
-        //                catch (Exception ex)
-        //                {
-        //                    await transaction.RollbackAsync();
-        //                    _logger.LogError(ex, "Error confirming purchase");
-        //                    return StatusCode(500, new Response(-1, "An error occurred while confirming the purchase", null));
-        //                }
-        //            }
-        //        }
-        //        else
-        //        {
-        //            return Ok(new Response(0, "Payment not completed yet", new { paymentInfo = paymentLinkInformation }));
-        //        }
-        //    }
-        //    catch (Exception exception)
-        //    {
-        //        _logger.LogError(exception, "Error in ConfirmPurchase");
-        //        return StatusCode(500, new Response(-1, "An unexpected error occurred", null));
-        //    }
-        //}
-
     }
 }
+
+
+//[HttpPost("ConfirmPurchase")]
+//public async Task<IActionResult> ConfirmPurchase([FromBody] CheckOrderRequest request)
+//{
+//    int orderCode = request.OrderCode;
+//    try
+//    {
+//        // Get the current user's email from the JWT token
+//        var userEmail = _httpContextAccessor.HttpContext.User.FindFirstValue(ClaimTypes.Email);
+//        if (string.IsNullOrEmpty(userEmail))
+//        {
+//            return Unauthorized("User not authenticated");
+//        }
+
+//        // Find the user in the database
+//        var user = await _dbContext.Users.FirstOrDefaultAsync(u => u.Email == userEmail);
+//        if (user == null)
+//        {
+//            return NotFound("User not found");
+//        }
+
+//        PaymentLinkInformation paymentLinkInformation = await _payOS.getPaymentLinkInformation(orderCode);
+
+//        if (paymentLinkInformation.status == "PAID")
+//        {
+//            using (var transaction = await _dbContext.Database.BeginTransactionAsync())
+//            {
+//                try
+//                {
+//                    // Create a new purchase record
+//                    var purchase = new Purchase
+//                    {
+//                        UserId = user.UserId,
+//                        OrderCode = orderCode,
+//                        Amount = paymentLinkInformation.amountPaid,
+//                        PurchaseDate = DateTime.UtcNow,
+//                        Status = "Completed"
+//                    };
+
+//                    _dbContext.Purchases.Add(purchase);
+//                    await _dbContext.SaveChangesAsync();
+
+//                    await transaction.CommitAsync();
+
+//                    // Prepare response with purchase info
+//                    var purchaseInfo = new
+//                    {
+//                        purchase.PurchaseId,
+//                        purchase.OrderCode,
+//                        purchase.Amount,
+//                        purchase.PurchaseDate,
+//                        purchase.Status
+//                    };
+
+//                    return Ok(new Response(0, "Purchase confirmed successfully", new
+//                    {
+//                        paymentInfo = paymentLinkInformation,
+//                        purchaseInfo = purchaseInfo
+//                    }));
+//                }
+//                catch (Exception ex)
+//                {
+//                    await transaction.RollbackAsync();
+//                    _logger.LogError(ex, "Error confirming purchase");
+//                    return StatusCode(500, new Response(-1, "An error occurred while confirming the purchase", null));
+//                }
+//            }
+//        }
+//        else
+//        {
+//            return Ok(new Response(0, "Payment not completed yet", new { paymentInfo = paymentLinkInformation }));
+//        }
+//    }
+//    catch (Exception exception)
+//    {
+//        _logger.LogError(exception, "Error in ConfirmPurchase");
+//        return StatusCode(500, new Response(-1, "An unexpected error occurred", null));
+//    }
+//}

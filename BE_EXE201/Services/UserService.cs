@@ -21,9 +21,10 @@ namespace BE_EXE201.Services
         private readonly IRepository<UserRole, int> _userRoleRepository;
         private readonly EmailService _emailService;
         private readonly IRepository<PaymentTransaction, int> _paymentTransactionRepository;
-        private const decimal MembershipFee = 200000;
+        private readonly CloudService _cloudService;
         private readonly AppDbContext _dbContext;
 
+        private const decimal MembershipFee = 200000;
 
 
         public UserService(
@@ -32,6 +33,7 @@ namespace BE_EXE201.Services
             IRepository<UserRole, int> userRoleRepository,
             EmailService emailService,
             IRepository<PaymentTransaction, int> paymentTransactionRepository,
+            CloudService cloudService,
             AppDbContext dbContext)
         {
             _userRepository = userRepository;
@@ -39,6 +41,7 @@ namespace BE_EXE201.Services
             _userRoleRepository = userRoleRepository;
             _emailService = emailService;
             _paymentTransactionRepository = paymentTransactionRepository;
+            _cloudService = cloudService;
             _dbContext = dbContext;
         }
 
@@ -50,30 +53,40 @@ namespace BE_EXE201.Services
         public async Task<UserModel> CreateNewUser(UserModel newUser)
         {
             var userEntity = _mapper.Map<User>(newUser);
-            var existedUser = _userRepository.FindByCondition(x => x.Email == newUser.Email).FirstOrDefault();
-            if (existedUser is not null)
-            {
-                throw new BadRequestException("email already exist");
-            }
-            var userRoleEntity = _userRoleRepository.FindByCondition(ur => ur.RoleId == newUser.RoleID).FirstOrDefault();
 
-            userEntity.UserRole = userRoleEntity!;
+            if (await _userRepository.FindByCondition(x => x.Email == newUser.Email).AnyAsync())
+            {
+                throw new BadRequestException("Email already exists");
+            }
+
+            var userRoleEntity = await _userRoleRepository.FindByCondition(ur => ur.RoleId == newUser.RoleID).FirstOrDefaultAsync();
+            if (userRoleEntity == null)
+            {
+                throw new BadRequestException("Invalid role ID");
+            }
+            userEntity.UserRole = userRoleEntity;
 
             userEntity.AvatarUrl = GravatarHelper.GetGravatarUrl(newUser.Email);
 
             await _userRepository.AddAsync(userEntity);
             var result = await _userRepository.Commit();
-            if (result > 0)
+
+            if (result <= 0)
             {
-                // get latest userID
-                newUser.UserId = _userRepository.GetAll().ToList().Max(x => x.UserId);
-                return newUser;
+                throw new InvalidOperationException("Failed to create new user.");
             }
-            else
-            {
-                return null;
-            }
+
+            var latestUserId = await _userRepository.FindByCondition(x => true)
+                                                    .OrderByDescending(x => x.UserId)
+                                                    .Select(x => x.UserId)
+                                                    .FirstOrDefaultAsync();
+            newUser.UserId = latestUserId;
+
+            return newUser;
         }
+
+
+
 
         public async Task<UserModel> GetUserById(int id)
         {
@@ -87,6 +100,34 @@ namespace BE_EXE201.Services
         }
 
      
+
+        public async Task<Response> UpdateUserImageAsync(string userEmail, IFormFile image)
+        {
+            var user = await _userRepository.FindByCondition(u => u.Email == userEmail).FirstOrDefaultAsync();
+            if (user == null)
+            {
+                return new Response(-1, "User not found", null);
+            }
+
+            var uploadResult = await _cloudService.UploadImageAsync(image);
+
+            if (uploadResult == null || string.IsNullOrEmpty(uploadResult.Url.ToString()))
+            {
+                return new Response(-1, "Failed to upload image.", null);
+            }
+
+            user.AvatarUrl = uploadResult.Url.ToString();
+            _userRepository.Update(user);
+
+            var updateResult = await _userRepository.Commit();
+            if (updateResult <= 0)
+            {
+                return new Response(-1, "Failed to update user image.", null);
+            }
+
+            return new Response(0, "User image updated successfully", new { avatarUrl = user.AvatarUrl });
+        }
+
 
         public async Task<UserModel> UpdateUser(UserModel existingUser, UpdateUserRequest req)
         {
@@ -178,19 +219,14 @@ namespace BE_EXE201.Services
 
                 if (existedUser != null)
                 {
-                    // Mã hóa mật khẩu mới
                     existedUser.Password = SecurityUtil.Hash(newPassword);
-
-                    // Cập nhật thông tin người dùng
                     _userRepository.Update(existedUser);
-
                     var result = await _userRepository.Commit();
-
                     return result > 0;
                 }
                 else
                 {
-                    return false; // Người dùng không tồn tại
+                    return false; 
                 }
             }
             catch (Exception ex)
@@ -253,52 +289,6 @@ namespace BE_EXE201.Services
             return _mapper.Map<UserModel>(user);
         }
 
-        /*  public async Task<CreateUserModel> FirstStep(CreateUserModel req)
-          {
-              var userEntity = _mapper.Map<User>(req);
-              var user = _userRepository.FindByCondition(x => x.Email == req.Email).FirstOrDefault();
-
-              if (user != null && user.OTPCode != null)
-              {
-                  user.RoleID = 4;
-                  user.Status = "InActive";
-                  user.CreateDate = DateTime.Now.AddMinutes(2);
-                  user.OTPCode = new Random().Next(100000, 999999).ToString();
-
-                  user = _userRepository.Update(user);
-                  int rs = await _userRepository.Commit();
-                  if (rs > 0)
-                  {
-                      return _mapper.Map<CreateUserModel>(user);
-                  }
-                  else
-                  {
-                      return null;
-                  }
-              }
-              userEntity.RoleID = 2;
-              userEntity.Status = "InActive";
-              userEntity.CreateDate = DateTime.Now.AddMinutes(2);
-              userEntity.Password = SecurityUtil.Hash(req.Password);
-              var existedUser = _userRepository.FindByCondition(x => x.Email == req.Email).FirstOrDefault();
-              if (existedUser != null)
-              {
-                  throw new BadRequestException("email already exist");
-              }
-              userEntity = await _userRepository.AddAsync(userEntity);
-              int result = await _userRepository.Commit();
-              if (result > 0)
-              {
-                  // get latest userID
-                  //newUser.UserId = _userRepository.GetAll().OrderByDescending(x => x.);
-                  req.UserId = userEntity.UserId;
-                  return _mapper.Map<CreateUserModel>(userEntity);
-              }
-              else
-              {
-                  return null;
-              }
-          }*/
 
 
 

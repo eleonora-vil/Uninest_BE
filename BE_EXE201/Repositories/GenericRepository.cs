@@ -1,6 +1,7 @@
 ﻿using System.Linq.Expressions;
 using Microsoft.EntityFrameworkCore;
 using BE_EXE201.Entities;
+using Microsoft.EntityFrameworkCore.Storage;
 
 namespace BE_EXE201.Repositories;
 
@@ -54,10 +55,20 @@ where TEntity : class
     {
         return await _dbSet.Where(predicate).SumAsync(selector);
     }
-    public async Task<IEnumerable<TEntity>> GetLastSevenDaysTransactionsAsync(Expression<Func<TEntity, bool>> predicate)
+    public async Task<IEnumerable<TEntity>> GetLastSevenDaysTransactionsAsync()
     {
-        var sevenDaysAgo = DateTime.Now.Date.AddDays(-6);
-        return await _dbSet.Where(predicate).Where(e => EF.Property<DateTime>(e, "CreatedDate") >= sevenDaysAgo).ToListAsync();
+        var sevenDaysAgo = DateTime.UtcNow.Date.AddDays(-6);
+
+        if (typeof(TEntity) == typeof(PaymentTransaction))
+        {
+            return await _dbSet.Cast<PaymentTransaction>()
+                               .Where(pt => pt.CreateDate >= sevenDaysAgo)
+                               .Cast<TEntity>()
+                               .ToListAsync();
+        }
+
+        // If the entity is not PaymentTransaction, return an empty list
+        return new List<TEntity>();
     }
     public async Task<IEnumerable<TEntity>> GetRecentUsersAsync(int count)
     {
@@ -67,8 +78,12 @@ where TEntity : class
     }
     public async Task<IEnumerable<TEntity>> GetRecentTransactionsAsync(int count)
     {
-        return await _dbSet.OrderByDescending(e => EF.Property<DateTime>(e, "UpdatedDate"))
+        return await _dbSet.OrderByDescending(e => EF.Property<DateTime>(e, "CreateDate"))
                            .Take(count)
                            .ToListAsync();
+    }
+    public async Task<IDbContextTransaction> BeginTransactionAsync()
+    {
+        return await _dbContext.Database.BeginTransactionAsync();
     }
 }
