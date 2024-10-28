@@ -26,6 +26,7 @@ namespace BE_EXE201.Common.Payloads.Responses.Home
 
         // Include full Utilities details
         public UtilitiesModel Utilities { get; set; } = new UtilitiesModel();
+        public UserModel Users { get; set; } = new UserModel();
 
         public ICollection<HomeImageModel> HomeImages { get; set; } = new List<HomeImageModel>();
     }

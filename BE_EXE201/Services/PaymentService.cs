@@ -1,151 +1,169 @@
-﻿//using BE_EXE201.Dtos.Payment;
-//using BE_EXE201.Entities;
-//using BE_EXE201.Exceptions;
-//using BE_EXE201.Extensions.NewFolder;
-//using BE_EXE201.Repositories;
-//using Microsoft.EntityFrameworkCore;
+﻿using BE_EXE201.Dtos.Payment;
+using BE_EXE201.Entities;
+using BE_EXE201.Exceptions;
+using BE_EXE201.Extensions.NewFolder;
+using BE_EXE201.Repositories;
+using Microsoft.EntityFrameworkCore;
+using Net.payOS;
+using Net.payOS.Types;
 
-//namespace BE_EXE201.Services
-//{
-//    public class PaymentService
-//    {
-//        private UserService _userService;
-//        IRepository<PaymentTransaction, int> _paymentTransactionRepository;
-//        private readonly IVnPayService _vnPayService;
-//        private readonly AppDbContext _dbContext;
+namespace BE_EXE201.Services
+{
+    public class PaymentService
+    {
+        private readonly IRepository<User, int> _userRepository;
+        private readonly IRepository<PaymentTransaction, string> _paymentTransactionRepository;
+        private readonly PayOS _payOS;
+
+        public PaymentService(
+            IRepository<User, int> userRepository,
+            IRepository<PaymentTransaction, string> paymentTransactionRepository,
+            PayOS payOS)
+        {
+            _userRepository = userRepository;
+            _paymentTransactionRepository = paymentTransactionRepository;
+            _payOS = payOS;
+        }
+
+        public async Task<Response> CreatePaymentLinkAsync(string userEmail, CreatePaymentLinkRequest body)
+        {
+            var user = _userRepository.FindByCondition(u => u.Email == userEmail).FirstOrDefault();
+            if (user == null)
+            {
+                return new Response(-1, "User not found", null);
+            }
+
+            int orderCode = int.Parse(DateTimeOffset.Now.ToString("ffffff"));
+            var items = new List<ItemData> { new ItemData(body.productName, 1, body.price) };
+            string buyerName = !string.IsNullOrEmpty(body.buyerName) ? body.buyerName : user.FullName;
+
+            var paymentData = new PaymentData(
+                orderCode,
+                body.price,
+                body.description,
+                items,
+                body.cancelUrl,
+                body.returnUrl,
+                buyerName
+            );
+
+            var createPayment = await _payOS.createPaymentLink(paymentData);
+
+            var paymentTransaction = new PaymentTransaction
+            {
+                TransactionId = createPayment.orderCode.ToString(),
+                UserId = user.UserId,
+                Amount = body.price,
+                Status = "PENDING",
+                CreateDate = DateTime.UtcNow,
+                UpdatedDate = DateTime.UtcNow
+            };
+
+            await _paymentTransactionRepository.AddAsync(paymentTransaction);
+            await _paymentTransactionRepository.Commit();
+
+            var currentUserInfo = new
+            {
+                user.UserId,
+                user.FullName,
+                user.Email,
+                user.PhoneNumber,
+                user.Wallet
+            };
+
+            return new Response(0, "success", new { paymentInfo = createPayment, userInfo = currentUserInfo });
+        }
+
+        public async Task<Response> GetOrderAsync(int orderCode)
+        {
+            var paymentLinkInformation = await _payOS.getPaymentLinkInformation(orderCode);
+            return new Response(0, "Ok", paymentLinkInformation);
+        }
+
+        public async Task<Response> CheckOrderAndUpdateWalletAsync(string userEmail, int orderCode)
+        {
+            var user = _userRepository.FindByCondition(u => u.Email == userEmail).FirstOrDefault();
+            if (user == null)
+            {
+                return new Response(-1, "User not found", null);
+            }
+
+            var paymentLinkInformation = await _payOS.getPaymentLinkInformation(orderCode);
+
+            if (paymentLinkInformation.status == "PAID")
+            {
+                using var transaction = await _paymentTransactionRepository.BeginTransactionAsync();
+                try
+                {
+                    // Find the existing payment transaction
+                    var paymentTransaction = await _paymentTransactionRepository
+                        .FindByCondition(pt => pt.TransactionId == orderCode.ToString())
+                        .FirstOrDefaultAsync();
+
+                    if (paymentTransaction == null)
+                    {
+                        return new Response(-1, "Transaction not found", null);
+                    }
+
+                    // Update transaction status and date
+                    paymentTransaction.Status = "PAID";
+                    paymentTransaction.UpdatedDate = DateTime.UtcNow;
+                    _paymentTransactionRepository.Update(paymentTransaction);
+
+                    // Update user's wallet
+                    user.Wallet = (user.Wallet ?? 0) + paymentLinkInformation.amountPaid;
+                    _userRepository.Update(user);
+
+                    // Commit all changes
+                    await _paymentTransactionRepository.Commit();
+                    await _userRepository.Commit();
+
+                    await transaction.CommitAsync();
+
+                    var updatedUserInfo = new
+                    {
+                        user.UserId,
+                        user.FullName,
+                        user.Email,
+                        user.PhoneNumber,
+                        user.Wallet
+                    };
+
+                    return new Response(0, "Wallet updated successfully", new { paymentInfo = paymentLinkInformation, userInfo = updatedUserInfo });
+                }
+                catch (Exception ex)
+                {
+                    await transaction.RollbackAsync();
+                    return new Response(-1, $"Error updating wallet: {ex.Message}", null);
+                }
+            }
+
+            return new Response(0, "Payment not completed yet", new { paymentInfo = paymentLinkInformation });
+        }
 
 
-//        public PaymentService(
-//            UserService userService,
-//           IRepository<PaymentTransaction, int> paymentTransactionRepository, 
-//            AppDbContext dbContext,
-//            IVnPayService vnPayService)
-//        {
-//            _userService = userService;
-//            _paymentTransactionRepository = paymentTransactionRepository;
-//            _vnPayService = vnPayService;
-//                _dbContext = dbContext; // Initialize the dbContext;
-//        }
+        public async Task<Response> CancelOrderAsync(int orderCode, string reason)
+        {
+            var result = await _payOS.cancelPaymentLink(orderCode, reason);
+            return new Response(0, "Order canceled", result);
+        }
 
-//        public async Task<string> InitiateCheckoutAsync(HttpContext httpContext, VnPaymentRequestModel paymentRequest)
-//        {
-//            using var transaction = await _dbContext.Database.BeginTransactionAsync();
-//            try
-//            {
-//                var user = await _userService.GetUserById(paymentRequest.UserId);
-//                if (user == null) throw new UserNotFoundException();
+        public async Task<Response> ConfirmWebhookAsync(string webhookUrl)
+        {
+            await _payOS.confirmWebhook(webhookUrl);
+            return new Response(0, "Webhook confirmed", null);
+        }
 
-//                // Generate unique OrderId and TransactionId
-//                int orderId = GenerateUniqueOrderId();
-//                int transactionId = GenerateUniqueTransactionId();
+        public Response HandleTransferWebhook(WebhookType webhookData)
+        {
+            var data = _payOS.verifyPaymentWebhookData(webhookData);
 
-//                var paymentTransaction = new PaymentTransaction
-//                {
-//                    UserId = paymentRequest.UserId,
-//                    OrderId =  orderId.ToString(), // Keep it as int
-//                    Amount = paymentRequest.Amount,
-//                    Status = "Pending",
-//                    CreateDate = DateTime.Now,
-//                    TransactionId = transactionId.ToString() // Keep it as int
-//                };
+            if (data.description == "Ma giao dich thu nghiem" || data.description == "VQRIO123")
+            {
+                return new Response(0, "Transfer ignored for test transaction", null);
+            }
 
-//                await _paymentTransactionRepository.AddAsync(paymentTransaction);
-//                await _paymentTransactionRepository.Commit();
-
-//                // Convert to string for payment request
-//                paymentRequest.OrderId = orderId.ToString();
-//                paymentRequest.Description = $"User {paymentRequest.UserId} paid {paymentRequest.Amount} to wallet on {DateTime.Now}";
-
-//                var paymentUrl = _vnPayService.CreatePaymentUrl(httpContext, paymentRequest);
-
-//                await transaction.CommitAsync();
-//                return paymentUrl;
-//            }
-//            catch
-//            {
-//                await transaction.RollbackAsync();
-//                throw;
-//            }
-//        }
-
-
-//        // Example method to generate a unique OrderId
-//        private int GenerateUniqueOrderId()
-//        {
-//            // You can implement your logic here to generate a unique OrderId
-//            // For demonstration, we're using a random number generator
-//            Random random = new Random();
-//            return random.Next(10000000, 99999999); // Generate an 8-digit random number
-//        }
-
-//        // Example method to generate a unique TransactionId
-//        private int GenerateUniqueTransactionId()
-//        {
-//            // You can implement your logic here to generate a unique TransactionId
-//            // For demonstration, we're using a random number generator
-//            Random random = new Random();
-//            return random.Next(10000000, 99999999); // Generate an 8-digit random number
-//        }
-
-
-
-
-
-//        public async Task<string> ProcessCheckoutCallbackAsync(IQueryCollection collections)
-//        {
-//            using var transaction = await _dbContext.Database.BeginTransactionAsync();
-//            try
-//            {
-//                // Execute payment and get response
-//                var paymentResponse = _vnPayService.PaymentExecute(collections);
-
-//                // Validate payment response
-//                if (!paymentResponse.Success || paymentResponse.VnPayResponseCode != "00")
-//                {
-//                    return await HandleFailedTransaction(paymentResponse.OrderId, paymentResponse.VnPayResponseCode);
-//                }
-
-//                // Find the existing payment transaction
-//                var paymentTransaction = await _paymentTransactionRepository.FindByCondition(pt => pt.OrderId == paymentResponse.OrderId).FirstOrDefaultAsync();
-//                if (paymentTransaction == null) throw new TransactionNotFoundException();
-
-//                // Update payment transaction details
-//                paymentTransaction.Status = "Success";
-//                paymentTransaction.TransactionId = paymentResponse.TransactionId;
-
-//                // Retrieve the user based on OrderId and update their wallet
-//                var user = await _userService.GetUserByOrderId(paymentResponse.OrderId);
-//                if (user != null)
-//                {
-//                    await _userService.UpdateUserWallet(user, paymentResponse);
-//                    await _paymentTransactionRepository.Commit(); // Commit changes to payment transaction
-//                    await transaction.CommitAsync(); // Commit the transaction
-//                    return "Transaction successful and wallet updated.";
-//                }
-
-//                throw new UserNotFoundException();
-//            }
-//            catch (Exception ex)
-//            {
-//                await transaction.RollbackAsync(); // Rollback in case of error
-//                                                   // Log exception details (optional)
-//                Console.WriteLine($"Error processing payment: {ex.Message}");
-//                throw; // Rethrow exception to be handled by caller
-//            }
-//        }
-
-//        // Handle transaction failure logic
-//        private async Task<string> HandleFailedTransaction(string orderId, string responseCode)
-//        {
-//            var paymentTransaction = await _paymentTransactionRepository.FindByCondition(pt => pt.OrderId == orderId).FirstOrDefaultAsync();
-//            if (paymentTransaction != null)
-//            {
-//                paymentTransaction.Status = "Failed"; // Update transaction status
-//                await _paymentTransactionRepository.Commit(); // Commit changes to payment transaction
-//            }
-//            return $"Transaction failed. Response code: {responseCode}";
-//        }
-
-//    }
-
-//}
+            return new Response(0, "Transfer handled", null);
+        }
+    }
+}

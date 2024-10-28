@@ -7,10 +7,10 @@ namespace BE_EXE201.Entities
     public class PaymentTransaction
     {
         public int Id { get; set; }
-        public int UserId { get; set; }       // Foreign key to associate with User
-        public decimal Amount { get; set; }   // Payment amount
-        public string TransactionId { get; set; }  // VNPay TransactionId
-        public string Status { get; set; }    // Transaction status
+        public int UserId { get; set; }
+        public decimal Amount { get; set; }
+        public string TransactionId { get; set; }
+        public string Status { get; set; }
         public DateTime CreateDate { get; set; }
         public DateTime UpdatedDate { get; set; }
 

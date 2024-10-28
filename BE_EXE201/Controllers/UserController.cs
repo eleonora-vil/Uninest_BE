@@ -25,15 +25,21 @@ namespace BE_EXE201.Controllers
         private readonly UserRoleService _userRoleService;
         private readonly IdentityService _identityService;
         private readonly EmailService _emailService;
-        private readonly IVnPayService _vnPayService;
+        private readonly IHttpContextAccessor _httpContextAccessor;
 
-        public UserController(UserService userService, UserRoleService userRoleService, IdentityService identityService, EmailService emailService, IVnPayService vnPayService)
+        public UserController(UserService userService,
+            UserRoleService userRoleService,
+            IdentityService identityService,
+            EmailService emailService,
+            IHttpContextAccessor httpContextAccessor
+            )
         {
             _userService = userService;
             _userRoleService = userRoleService;
             _identityService = identityService;
             _emailService = emailService;
-            _vnPayService = vnPayService;
+            _httpContextAccessor = httpContextAccessor;
+
         }
         [HttpGet("GetAll")]
         // [Authorize(Roles = "Admin")]
@@ -75,6 +81,27 @@ namespace BE_EXE201.Controllers
             else
             {
                 return BadRequest();
+            }
+        }
+
+        [HttpPut("UpdateUserImage")]
+        public async Task<IActionResult> UpdateUserImage(IFormFile image)
+        {
+            try
+            {
+                var userEmail = _httpContextAccessor.HttpContext.User.FindFirstValue(ClaimTypes.Email);
+                if (string.IsNullOrEmpty(userEmail))
+                {
+                    return Unauthorized("User not authenticated");
+                }
+
+                var response = await _userService.UpdateUserImageAsync(userEmail, image);
+                return Ok(response);
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine(ex.Message);
+                return StatusCode(500, "An error occurred while updating user image.");
             }
         }
 

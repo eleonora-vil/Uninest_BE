@@ -23,6 +23,12 @@ namespace BE_EXE201.Controllers
             var count = await _dashboardServices.GetTotalHomePosts();
             return Ok(new { TotalPosts = count });
         }
+        [HttpGet("transactionCount")]
+        public async Task<IActionResult> GetTotalTransaction()
+        {
+            var count = await _dashboardServices.GetTotalTransactions();
+            return Ok(new { TotalTransactions = count });
+        }
 
         [HttpGet("total-earnings")]
         public async Task<IActionResult> GetTotalEarnings()
@@ -34,7 +40,7 @@ namespace BE_EXE201.Controllers
         [HttpGet("total-earnings-by-day")]
         public async Task<IActionResult> GetTotalEarningsByDay()
         {
-            var totalEarnings = await _dashboardServices.GetTotalEarningsByDayForLastSevenDays();
+            var totalEarnings = await _dashboardServices.GetWeeklyTransactionAmounts();
             return Ok(totalEarnings);
         }
 

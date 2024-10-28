@@ -87,7 +87,7 @@ public static class ServicesExtensions
         services.AddScoped<ImageService>();
         services.AddScoped<HomeService>();
         services.AddScoped<DashboardServices>();
-        //services.AddScoped<PaymentService>();
+        services.AddScoped<PaymentService>();
         services.AddHostedService<TransactionSyncService>();
 
 

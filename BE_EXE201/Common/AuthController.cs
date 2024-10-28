@@ -39,7 +39,8 @@ public class AuthController : ControllerBase
         }
         var result = new SignupResponse
         {
-            Messages = "Sign up success"
+            Messages = "Sign up success",
+            Status = "Inactive" // Add this line
         };
 
         return Ok(ApiResult<SignupResponse>.Succeed(result));
