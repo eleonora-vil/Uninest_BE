@@ -80,7 +80,7 @@ namespace BE_EXE201.Services
             var userIds = recentTransactions.Select(t => t.UserId).Distinct().ToList();
             var users = await _userRepository.FindByCondition(u => userIds.Contains(u.UserId)).ToListAsync();
 
-            return recentTransactions.Select(t => new RecentTransactionModel
+            return recentTransactions.OrderByDescending(t => t.CreateDate).Select(t => new RecentTransactionModel
             {
                 TransactionId = t.TransactionId,
                 Username = users.FirstOrDefault(u => u.UserId == t.UserId)?.UserName ?? "Unknown",
