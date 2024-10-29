@@ -18,5 +18,7 @@ public interface IRepository<TEntity, in TKey>
     Task<IEnumerable<TEntity>> GetRecentUsersAsync(int count);
     Task<IEnumerable<TEntity>> GetRecentTransactionsAsync(int count);
     Task<IDbContextTransaction> BeginTransactionAsync();
+    Task<int> CountByStatusAsync(string status);
+
 
 }

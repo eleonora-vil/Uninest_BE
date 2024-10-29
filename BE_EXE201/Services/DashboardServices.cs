@@ -12,6 +12,7 @@ namespace BE_EXE201.Services
         private readonly IRepository<User, int> _userRepository;
         private readonly IRepository<PaymentTransaction, int> _paymentTransactionRepository;
         private readonly IRepository<Home, int> _homeRepository;
+        private const string PAID_STATUS = "PAID";
 
 
         public DashboardServices(IRepository<User, int> userRepository, IRepository<PaymentTransaction, int> paymentTransactionRepository,
@@ -33,7 +34,7 @@ namespace BE_EXE201.Services
         }
         public async Task<int> GetTotalTransactions()
         {
-            return await _paymentTransactionRepository.CountAsync();
+            return await _paymentTransactionRepository.CountByStatusAsync(PAID_STATUS);
         }
 
         public async Task<decimal> GetTotalEarningsFromActiveTransactions()

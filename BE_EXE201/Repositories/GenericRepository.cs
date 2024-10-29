@@ -51,6 +51,7 @@ where TEntity : class
     {
         return await _dbSet.CountAsync();
     }
+
     public async Task<decimal> SumAsync(Expression<Func<TEntity, bool>> predicate, Expression<Func<TEntity, decimal>> selector)
     {
         return await _dbSet.Where(predicate).SumAsync(selector);
@@ -85,5 +86,15 @@ where TEntity : class
     public async Task<IDbContextTransaction> BeginTransactionAsync()
     {
         return await _dbContext.Database.BeginTransactionAsync();
+    }
+    public async Task<int> CountByStatusAsync(string status)
+    {
+        if (typeof(TEntity) != typeof(PaymentTransaction))
+        {
+            throw new InvalidOperationException("This method is only valid for PaymentTransaction entities");
+        }
+
+        return await _dbSet.Cast<PaymentTransaction>()
+            .CountAsync(pt => pt.Status.ToUpper() == status.ToUpper());
     }
 }

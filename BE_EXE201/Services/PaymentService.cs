@@ -55,8 +55,8 @@ namespace BE_EXE201.Services
                 UserId = user.UserId,
                 Amount = body.price,
                 Status = "PENDING",
-                CreateDate = DateTime.UtcNow,
-                UpdatedDate = DateTime.UtcNow
+                CreateDate = DateTime.Now,
+                UpdatedDate = DateTime.Now
             };
 
             await _paymentTransactionRepository.AddAsync(paymentTransaction);
@@ -107,7 +107,7 @@ namespace BE_EXE201.Services
 
                     // Update transaction status and date
                     paymentTransaction.Status = "PAID";
-                    paymentTransaction.UpdatedDate = DateTime.UtcNow;
+                    paymentTransaction.UpdatedDate = DateTime.Now;
                     _paymentTransactionRepository.Update(paymentTransaction);
 
                     // Update user's wallet

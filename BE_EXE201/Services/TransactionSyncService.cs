@@ -10,6 +10,8 @@ public class TransactionSyncService : BackgroundService
     private readonly ILogger<TransactionSyncService> _logger;
     private readonly PayOS _payOS;
     private const int BatchSize = 100; // Adjust this value as needed
+    private const int EXPIRATION_HOURS = 12;
+    private const string EXPIRED_REASON = "Order expired due to no payment";
 
     public TransactionSyncService(IServiceProvider serviceProvider, ILogger<TransactionSyncService> logger, PayOS payOS)
     {
@@ -40,61 +42,63 @@ public class TransactionSyncService : BackgroundService
         using var scope = _serviceProvider.CreateScope();
         var dbContext = scope.ServiceProvider.GetRequiredService<AppDbContext>();
 
-        int latestId = await GetLatestId();
-        int currentId = latestId;
-        bool hasMoreTransactions = true;
-
-        while (hasMoreTransactions)
+        try
         {
-            int processedCount = 0;
-            for (int i = 0; i < BatchSize; i++)
+            // Get expired unpaid transactions
+            var expirationDate = DateTime.UtcNow.AddHours(EXPIRATION_HOURS);
+            var expiredTransactions = await dbContext.PaymentTransactions
+                .Where(pt => pt.Status.ToLower() != "paid"
+                         && pt.Status.ToLower() != "cancelled"
+                         && pt.CreateDate < expirationDate)
+                .Take(BatchSize)
+                .ToListAsync();
+
+            foreach (var transaction in expiredTransactions)
             {
                 try
                 {
-                    long? transactionId = await GetTransactionIdById(dbContext, currentId);
-                    if (!transactionId.HasValue)
+                    // Parse the transaction ID to long
+                    if (long.TryParse(transaction.TransactionId, out long orderCode))
                     {
-                        hasMoreTransactions = false;
-                        break;
+                        // Cancel the order in PayOS
+                        await _payOS.cancelPaymentLink(orderCode, EXPIRED_REASON);
+
+                        // Update the transaction status in database
+                        transaction.Status = "CANCELLED";
+                        transaction.UpdatedDate = DateTime.UtcNow;
+
+                        _logger.LogInformation($"Successfully cancelled expired order: {orderCode}");
                     }
-
-                    var paymentInfo = await _payOS.getPaymentLinkInformation(transactionId.Value);
-
-                    await SaveTransaction(dbContext, paymentInfo);
-                    currentId--;
-                    processedCount++;
+                    else
+                    {
+                        _logger.LogWarning($"Invalid transaction ID format: {transaction.TransactionId}");
+                    }
                 }
                 catch (PayOSError ex) when (ex.Code == "429")
                 {
                     _logger.LogWarning("Rate limit reached. Pausing sync process.");
-                    await Task.Delay(TimeSpan.FromSeconds(30)); // Wait for 30 seconds before retrying
-                    break;
-                }
-                catch (PayOSError ex) when (ex.Code == "14")
-                {
-                    // No new orders found, we can stop
-                    hasMoreTransactions = false;
+                    await Task.Delay(TimeSpan.FromSeconds(30));
                     break;
                 }
                 catch (Exception ex)
                 {
-                    _logger.LogError(ex, $"Error processing order with Id {currentId}");
-                    currentId++; // Move to the next ID even if there's an error
-                    continue;
+                    _logger.LogError(ex, $"Error cancelling transaction {transaction.TransactionId}");
                 }
             }
 
-            await dbContext.SaveChangesAsync();
-            _logger.LogInformation($"Processed {processedCount} transactions. Last processed ID: {currentId - 1}");
-
-            if (processedCount == 0)
+            // Save all changes to the database
+            if (expiredTransactions.Any())
             {
-                hasMoreTransactions = false;
+                await dbContext.SaveChangesAsync();
+                _logger.LogInformation($"Processed {expiredTransactions.Count} expired transactions");
             }
         }
-
-        _logger.LogInformation("Finished syncing all transactions");
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Error occurred while processing expired transactions");
+        }
     }
+
 
     private async Task<int> GetLatestId()
     {
