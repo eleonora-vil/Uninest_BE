@@ -1,0 +1,38 @@
+version: "3.9"
+
+services:
+  database:
+    image: mcr.microsoft.com/mssql/server:2019-latest
+    restart: always
+    environment:
+      - ACCEPT_EULA=Y
+      - MSSQL_USER=sa
+      - MSSQL_PASSWORD=12345  
+      - MSSQL_PID=Express
+      - MSSQL_DATABASE=BE_EXE201
+      - TZ=Asia/Ho_Chi_Minh
+    ports:
+      - '1433:1433'
+    volumes:
+      - sql_data:/var/opt/mssql
+    networks:
+      - dev-network
+
+  backend:
+    build: .
+    ports:
+      - '8888:80'
+    environment:
+      - ASPNETCORE_ENVIRONMENT=Development
+      - ConnectionStrings__SqlDbConnection=Server=database,1433;Database=BE_EXE201;User ID=sa;Password=12345;Trusted_Connection=true;TrustServerCertificate=true
+    depends_on:
+      database:
+        condition: service_started
+    networks:
+      - dev-network
+
+networks: 
+  dev-network:
+
+volumes:
+  sql_data:
