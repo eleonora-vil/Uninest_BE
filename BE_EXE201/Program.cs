@@ -66,18 +66,18 @@ public class Program
             await app.InitialiseDatabaseAsync();
         });
         // Configure the HTTP request pipeline.
-        if (app.Environment.IsDevelopment())
-        {
-            await using (var scope = app.Services.CreateAsyncScope())
-            {
-                var dbContext = scope.ServiceProvider.GetRequiredService<AppDbContext>();
-                await dbContext.Database.MigrateAsync();
-            }
+        // if (app.Environment.IsDevelopment())
+        // {
+        //     await using (var scope = app.Services.CreateAsyncScope())
+        //     {
+        //         var dbContext = scope.ServiceProvider.GetRequiredService<AppDbContext>();
+        //         await dbContext.Database.MigrateAsync();
+        //     }
 
-            app.UseSwagger();
-            app.UseSwaggerUI();
-        }
-
+            
+        // }
+        app.UseSwagger();
+        app.UseSwaggerUI();
         app.UseCors("CORS");
 
         app.UseHttpsRedirection();
