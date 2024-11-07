@@ -9,4 +9,5 @@ public class SignupRequest
     public string gender { get; set; } = null!;
     public string address { get; set; } = null!;
     public string phone { get; set; } = null!;
+    public DateTime? BirthDate { get; set; }
 }

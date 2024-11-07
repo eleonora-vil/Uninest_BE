@@ -162,6 +162,20 @@ namespace BE_EXE201.Services
                     {
                         userEntity.PhoneNumber = req.PhoneNumber;
                     }
+                    /*if (req.IsActiveMember.HasValue)
+                    {
+                        userEntity.IsActiveMember = req.IsActiveMember.Value;
+                    }*/
+                    if (req.IsMember.HasValue)
+                    {
+                        userEntity.IsMember = req.IsMember.Value;
+                    }
+                    if (req.Wallet is not null)
+                    {
+                        userEntity.Wallet = req.Wallet.Value;
+                    }
+
+
 
                     _userRepository.Update(userEntity);
                     var result = await _userRepository.Commit();
@@ -190,7 +204,7 @@ namespace BE_EXE201.Services
                 if (existedUser != null)
                 {
                     // Cập nhật wallet
-                    existedUser.Wallet -= amount;
+                    existedUser.Wallet += amount;
 
                     // Cập nhật thông tin người dùng
                     _userRepository.Update(existedUser);

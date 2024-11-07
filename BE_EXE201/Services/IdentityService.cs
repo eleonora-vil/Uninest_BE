@@ -45,10 +45,14 @@ public class IdentityService
             Gender = req.gender,
             Address = req.address,
             PhoneNumber = req.phone,
+            BirthDate = (DateTime)req.BirthDate,
             CreateDate = DateTime.Now,
             Status = "Active",
             RoleID = 2,
-            OTPCode = otp.ToString()
+            OTPCode = otp.ToString(),
+            IsMember = false,
+            Wallet = 0,
+            
 
         });
 
