@@ -14,6 +14,7 @@ using BE_EXE201.Extensions.NewFolder;
 using System.Net.Mail;
 using System.Security.Claims;
 using BE_EXE201.Dtos.User;
+using Microsoft.IdentityModel.Tokens;
 
 namespace BE_EXE201.Controllers
 {
@@ -84,26 +85,44 @@ namespace BE_EXE201.Controllers
             }
         }
 
-        [HttpPut("UpdateUserImage")]
-        public async Task<IActionResult> UpdateUserImage(IFormFile image)
+        [HttpPut("UpdateUserImage/{userId}")]
+        public async Task<IActionResult> UpdateUserImage(int userId, IFormFile image)
         {
             try
             {
+                // Get the current user's email from the claims
                 var userEmail = _httpContextAccessor.HttpContext.User.FindFirstValue(ClaimTypes.Email);
                 if (string.IsNullOrEmpty(userEmail))
                 {
                     return Unauthorized("User not authenticated");
                 }
 
-                var response = await _userService.UpdateUserImageAsync(userEmail, image);
-                return Ok(response);
+                // Validate if the image is null
+                if (image == null || image.Length == 0)
+                {
+                    return BadRequest("Image is required.");
+                }
+
+                // Call the service to update the user's image
+                var responseMessage = await _userService.UpdateUserImageAsync(userId, userEmail, image);
+
+                // Check if the response message is null (indicating success)
+                if (string.IsNullOrEmpty(responseMessage))
+                {
+                    return Ok("User image updated successfully.");
+                }
+
+                // If there's an error message, return it as NotFound (or BadRequest, depending on context)
+                return NotFound(responseMessage);
             }
             catch (Exception ex)
             {
                 Console.WriteLine(ex.Message);
-                return StatusCode(500, "An error occurred while updating user image.");
+                return StatusCode(500, "An error occurred while updating the user image.");
             }
         }
+
+
 
         [HttpPut("Update/{userId}")]
         //[Authorize(Roles ="Admin")]
@@ -152,9 +171,9 @@ namespace BE_EXE201.Controllers
             }
         }
 
-        [HttpPost("UpdateWallet")]
+        [HttpPost("UpdateWalletAfterPosted")]
         //[Authorize(Roles ="Admin")]
-        public async Task<IActionResult> UpdateUserWallet(int userId, decimal amount)
+        public async Task<IActionResult> UpdateUserWalletAfterPosted(int userId, decimal amount)
         {
             try
             {
@@ -170,7 +189,7 @@ namespace BE_EXE201.Controllers
                     return NotFound("User not found");
                 }  
 
-                var updatedUser = await _userService.UpdateUserWallet(existingUser, amount);
+                var updatedUser = await _userService.UpdateUserWalletAfterPosted(existingUser, amount);
 
                 if (updatedUser)
                 {

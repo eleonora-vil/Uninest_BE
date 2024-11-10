@@ -99,34 +99,45 @@ namespace BE_EXE201.Services
             return null;
         }
 
-     
 
-        public async Task<Response> UpdateUserImageAsync(string userEmail, IFormFile image)
+
+        public async Task<string> UpdateUserImageAsync(int userId, string requesterEmail, IFormFile image)
         {
-            var user = await _userRepository.FindByCondition(u => u.Email == userEmail).FirstOrDefaultAsync();
+            // Check if the requester has permission to update this user's image
+            var requester = await _userRepository.FindByCondition(u => u.Email == requesterEmail).FirstOrDefaultAsync();
+            if (requester == null)
+            {
+                return "Requester not found";
+            }
+
+            // Find the user by userId
+            var user = await _userRepository.FindByCondition(u => u.UserId == userId).FirstOrDefaultAsync();
             if (user == null)
             {
-                return new Response(-1, "User not found", null);
+                return "User not found";
             }
 
+            // Upload the image to the cloud service
             var uploadResult = await _cloudService.UploadImageAsync(image);
-
             if (uploadResult == null || string.IsNullOrEmpty(uploadResult.Url.ToString()))
             {
-                return new Response(-1, "Failed to upload image.", null);
+                return "Failed to upload image.";
             }
 
+            // Update the user's avatar URL and save to the database
             user.AvatarUrl = uploadResult.Url.ToString();
             _userRepository.Update(user);
-
             var updateResult = await _userRepository.Commit();
+
             if (updateResult <= 0)
             {
-                return new Response(-1, "Failed to update user image.", null);
+                return "Failed to update user image.";
             }
 
-            return new Response(0, "User image updated successfully", new { avatarUrl = user.AvatarUrl });
+            // Return null to indicate success
+            return null;
         }
+
 
 
         public async Task<UserModel> UpdateUser(UserModel existingUser, UpdateUserRequest req)
@@ -195,7 +206,7 @@ namespace BE_EXE201.Services
             }
         }
 
-        public async Task<bool> UpdateUserWallet(UserModel user, decimal amount)
+        public async Task<bool> UpdateUserWalletAfterPosted(UserModel user, decimal amount)
         {
             try
             {
@@ -204,7 +215,7 @@ namespace BE_EXE201.Services
                 if (existedUser != null)
                 {
                     // Cập nhật wallet
-                    existedUser.Wallet += amount;
+                    existedUser.Wallet -= amount;
 
                     // Cập nhật thông tin người dùng
                     _userRepository.Update(existedUser);
